@@ -1,142 +1,134 @@
 # dotfiles
 
-Dotfiles pribadi rhmatzeka yang bisa dipasang orang lain dengan satu perintah.
-*Personal dotfiles you can install with a single command (English summary at the bottom).*
+A one-command setup for a Linux terminal and desktop: zsh, tmux, Neovim, Ghostty, terminal browsers, and an optional
+Hyprland + Caelestia desktop. Nothing is overwritten without a backup, and everything can be undone.
 
 ```bash
-bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
+bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh)
 ```
 
-Pakai `bash <(...)`, bukan `curl | bash`, supaya terminal tetap terhubung dan menu serta kata sandi `sudo` berfungsi.
-Sebelum menjalankan skrip dari internet, **baca dulu isinya**. Ini bisa dilihat dengan
-`curl -fsSL https://dotfiles.rahmateka.my.id | less`, dan semua langkah bisa dicoba tanpa mengubah apa pun dengan `--dry-run`.
+## Preview
 
-## Isi
+<!--
+  ADD YOUR VIDEO HERE (full instructions: docs/adding-a-preview.md)
+  1. Open this file on github.com and click the pencil icon (Edit).
+  2. Drag and drop your .mp4 / .mov into the editor. GitHub uploads it and inserts a link like
+     https://github.com/user-attachments/assets/<id>
+  3. Keep that link on a line of its own (that turns it into a player), delete the placeholder image below, commit.
+  A GIF works too: ![Demo](docs/demo.gif)
+-->
 
-| Komponen | Isinya |
-|---|---|
-| `base` | Paket dasar (git, fzf, ripgrep, eza, zoxide, ...) dan font JetBrainsMono Nerd |
-| `shell` | zsh, Oh My Zsh (autosuggestions, syntax highlighting), prompt starship |
-| `tmux` | tmux dengan tema cyan/Dracula |
-| `nvim` | Neovim + NvChad, parser tree-sitter (html, css, js, php, ...) dan LSP lewat Mason |
-| `terminal` | Konfigurasi Ghostty (tema gelap, tombol ala Vim) |
-| `browsers` | Browser terminal: Browsh (Firefox di terminal), elinks, w3m |
-| `desktop` | Hyprland + Caelestia shell. **Hanya Debian 13.** Qt 6.11 dibangun dari source (1 sampai 2 jam) |
+![Preview video coming soon](docs/preview-placeholder.svg)
 
-## Sistem yang didukung
+## Install
 
-| OS | Status |
-|---|---|
-| Debian 13 (trixie) | `base`, `shell`, `tmux`, `nvim`, `terminal`, `browsers` **teruji dari nol** di Debian 13 minimal yang bersih. `desktop`: daftar paketnya tervalidasi, build dari source belum dijalankan ulang (beta) |
-| Ubuntu / turunan Debian lain | CI GitHub (Ubuntu) lulus: dry-run semua komponen selain `desktop`, serta pemasangan asli `shell`, `tmux`, `terminal` dan uninstall. `nvim` dan `browsers` belum teruji di Ubuntu |
-| Arch, Fedora, macOS | **Belum didukung.** Kontribusi sangat diterima (lihat bawah) |
-
-Yang benar-benar dijalankan:
-
-- **Debian 13 bersih** (rootfs minimal, hanya 119 paket): pemasangan `base shell tmux nvim terminal browsers` lewat `apt`
-  sampai selesai dengan exit 0. Hasilnya diperiksa: versi semua alat, font Nerd, tmux dan zsh membaca config,
-  Neovim dengan 18 parser dan 7 LSP, serta warna sintaks pada file PHP/HTML/JS.
-- **HOME kosong** (mesin yang paketnya sudah ada): `--dry-run`, pemasangan saat pengguna sudah punya file sendiri
-  (dibackup), pemasangan ulang (tidak mengulang backup), `uninstall` (file asli kembali), dan seluruh alur lewat
-  URL mentah GitHub.
-- **Debian 13, `desktop`**: 79 paket utama dan 5 paket backports disimulasikan (`apt-get -s`), semuanya dapat
-  di-resolve (373 paket total). Yang **belum** dijalankan ulang dari nol adalah build Qt 6.11, quickshell, dan
-  Caelestia dari source lewat skrip ini. Versinya dikunci ke kombinasi yang pernah berhasil dibangun dan dijalankan
-  manual, tapi anggap `desktop` sebagai **beta**.
-
-## Pemakaian
+Use `bash <(...)` rather than `curl | bash`: it keeps your terminal attached, so the menu and the `sudo` password
+prompt work. **Read a script before you run it.** You can look at this one first:
 
 ```bash
-./install.sh                    # menu interaktif
-./install.sh --all              # semua komponen, termasuk desktop
-./install.sh --only shell,nvim  # pilih sendiri
-./install.sh --dry-run --all    # lihat apa yang akan terjadi, tanpa mengubah apa pun
-./install.sh --yes              # tanpa pertanyaan (jawaban bawaan)
-./install.sh --list             # daftar komponen
+curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh | less
 ```
 
-Lewat `curl`, tambahkan opsinya setelah perintah, misalnya
-`bash <(curl -fsSL https://dotfiles.rahmateka.my.id) --dry-run --all`.
+Every step can be rehearsed without changing anything:
 
-## Keamanan
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh) --dry-run --all
+```
 
-- File yang akan diganti **dipindah dulu** ke `~/.dotfiles-backup/<waktu>/`, bukan ditimpa.
-- Semua symlink yang dibuat dicatat, sehingga `uninstall` hanya membatalkan yang dibuat installer ini.
-- `sudo` hanya dipakai untuk memasang paket dan (pada `desktop`) menulis ke `/opt` dan `/usr/local`.
-- Jalankan sebagai pengguna biasa, bukan root.
+A short domain (`dotfiles.rahmateka.my.id`) can serve the same script; see [docs/short-domain.md](docs/short-domain.md).
+Until that is set up, use the GitHub URL above.
+
+## What you get
+
+| Component | Contents |
+|---|---|
+| `base` | Base packages (git, fzf, ripgrep, eza, zoxide, ...) and the JetBrainsMono Nerd Font |
+| `shell` | zsh, Oh My Zsh (autosuggestions, syntax highlighting) and the starship prompt |
+| `tmux` | tmux with a cyan / Dracula theme |
+| `nvim` | Neovim + NvChad, tree-sitter parsers (html, css, js, php, ...) and LSP servers through Mason |
+| `terminal` | Ghostty config: dark theme, Vim-style keys |
+| `browsers` | Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m |
+| `desktop` | Hyprland + Caelestia shell. **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
+
+The default selection is everything except `desktop`.
+
+## Supported systems
+
+| System | Status |
+|---|---|
+| Debian 13 (trixie) | `base`, `shell`, `tmux`, `nvim`, `terminal`, `browsers` installed and checked **from scratch in a clean Debian 13**. `desktop`: the package lists are validated; the source build has not been re-run through this script yet (beta) |
+| Ubuntu 24.04 LTS | Same six components installed and checked from scratch in a clean Ubuntu. Not in Ubuntu's repositories, so handled differently: `starship` uses its official installer, `fastfetch` is skipped, and Browsh is skipped (no `firefox-esr` package), while elinks and w3m are installed |
+| Ubuntu 26.04 LTS | Same six components installed and checked from scratch in a clean Ubuntu. `starship` and `fastfetch` come straight from apt here. Browsh is skipped (no `firefox-esr` package); elinks and w3m are installed |
+| Arch, Fedora, macOS | **Not supported yet.** Contributions are welcome (see below) |
+
+`desktop` is Debian 13 only because it depends on `trixie-backports` (Hyprland) and on pinned build versions.
+
+### How this was tested
+
+- Real installs into **clean root filesystems** (a minimal Debian 13 and minimal Ubuntu images), as a normal user, with
+  the results inspected afterwards: tool versions, fonts, tmux and zsh reading their config, 18 tree-sitter parsers and
+  7 LSP servers in Neovim, and syntax colours on a PHP file that mixes HTML and JavaScript.
+- A user who **already has their own config files**: they are backed up, a second install does not back them up
+  again, and `uninstall` puts the originals back. The whole flow was also run through the public GitHub URL.
+- `--dry-run` for every component, shellcheck, and a GitHub Actions run on Ubuntu for every push.
+- Failures are not swallowed: a failed `apt` step fails its component and the installer exits non-zero.
+
+**Not tested:** the `desktop` source build from scratch, any distribution not listed above, and ARM machines.
+
+## Usage
+
+```bash
+./install.sh                    # interactive menu
+./install.sh --all              # every component, including desktop
+./install.sh --only shell,nvim  # pick components
+./install.sh --dry-run --all    # show what would happen, change nothing
+./install.sh --yes              # no questions, use the default answers
+./install.sh --list             # list the components
+```
+
+Through `curl`, put the options after the command, for example
+`bash <(curl -fsSL <url>) --only shell,tmux`.
+
+## Safety
+
+- A file that would be replaced is **moved** to `~/.dotfiles-backup/<timestamp>/`, never overwritten.
+- Every symlink it creates is recorded, so `uninstall` only undoes what this installer did.
+- `sudo` is used only to install packages and, for `desktop`, to write under `/opt` and `/usr/local`.
+- Run it as a normal user, not as root.
 
 ## Uninstall
 
 ```bash
-bash <(curl -fsSL https://dotfiles.rahmateka.my.id/uninstall.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/uninstall.sh)
 ```
 
-Symlink dibuang dan file asli dikembalikan. Paket, font, Oh My Zsh, dan hasil build di `/opt` tidak ikut dihapus;
-daftarnya ditampilkan di akhir.
+The links are removed and your original files come back. Packages, fonts, Oh My Zsh and anything built under `/opt`
+are left in place; the list is printed at the end.
 
-## Cara kerja
+## How it works
 
-`install.sh` di root hanya mendeteksi OS, mengambil repo ke `~/.dotfiles`, lalu menjalankan installer platform
-(`linux/debian/install.sh`). Konfigurasi ada di `config/` dan dipasang sebagai symlink, jadi mengeditnya di
-`~/.dotfiles` langsung berlaku. Fungsi bersama (backup, symlink, dry-run) ada di `lib/common.sh`.
+The top-level `install.sh` detects the OS, fetches this repository to `~/.dotfiles`, and hands over to the installer for
+that platform (`linux/debian/install.sh`). Configs live in `config/` and are installed as symlinks, so editing them
+in `~/.dotfiles` takes effect immediately. Shared helpers (backup, symlinks, dry run) are in `lib/common.sh`.
 
 ```
-install.sh  uninstall.sh        titik masuk (deteksi OS)
-lib/common.sh                   fungsi bersama
-linux/debian/                   installer Debian: install.sh, uninstall.sh, desktop.sh
+install.sh  uninstall.sh        entry points (OS detection)
+lib/common.sh                   shared helpers
+linux/debian/                   Debian/Ubuntu installer: install.sh, uninstall.sh, desktop.sh
 config/                         zsh, starship, tmux, nvim, ghostty, elinks, caelestia
-bin/                            skrip kecil (web, firefox-for-browsh)
+bin/                            small scripts (web, firefox-for-browsh)
+docs/                           preview placeholder, how-tos
 ```
 
-## Menambah OS lain
+## Adding another OS
 
-Buat `linux/<nama>/install.sh` dan `uninstall.sh` (contoh: `linux/debian/`), lalu tambahkan cabang OS-nya di
-`install.sh`. Pakai fungsi di `lib/common.sh` supaya `--dry-run` dan backup ikut bekerja. Pull request diterima,
-tapi mohon jelaskan di deskripsinya OS mana yang benar-benar diuji.
+Create `linux/<name>/install.sh` and `uninstall.sh` (see `linux/debian/` for the shape) and add the OS to the detection
+in `install.sh`. Use the helpers in `lib/common.sh` so that `--dry-run` and backups keep working. Pull requests are
+welcome; please say in the description which system you actually tested on.
 
-## Menyiapkan domain pendek (untuk pemilik repo)
+## License and credits
 
-URL mentah selalu jalan:
-`bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh)`
-
-Untuk `dotfiles.rahmateka.my.id` lewat Cloudflare (DNS zona `rahmateka.my.id` ada di Cloudflare):
-
-1. **DNS**: kalau zona sudah punya wildcard `*` yang **Proxied** (awan oranye), tidak perlu record baru, karena
-   `dotfiles.rahmateka.my.id` sudah menuju Cloudflare (untuk zona ini memang sudah, tapi masih menjawab error 526
-   dari server asal, sampai aturan di bawah dibuat). Kalau belum ada wildcard, tambah record `AAAA`, nama `dotfiles`,
-   isi `100::`, **Proxied**. Isinya bebas, tidak pernah dituju.
-2. **Rules > Redirect Rules > Create rule**, dua aturan. Pilih *Custom filter expression* lalu *Edit expression* dan
-   tempel:
-
-   | Nama aturan | Ekspresi | Redirect ke (Static, status 302) |
-   |---|---|---|
-   | `dotfiles install` | `(http.host eq "dotfiles.rahmateka.my.id" and http.request.uri.path eq "/")` | `https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh` |
-   | `dotfiles uninstall` | `(http.host eq "dotfiles.rahmateka.my.id" and http.request.uri.path eq "/uninstall.sh")` | `https://raw.githubusercontent.com/rhmatzeka/dotfile/main/uninstall.sh` |
-
-   Biarkan *Preserve query string* mati. Klik *Deploy*.
-3. Uji: `curl -fsSL https://dotfiles.rahmateka.my.id | head -3` harus menampilkan `#!/usr/bin/env bash`, dan
-   `curl -sI https://dotfiles.rahmateka.my.id/uninstall.sh` harus menjawab `302` ke `raw.githubusercontent.com`.
-   Aturan Cloudflare biasanya aktif dalam hitungan detik.
-
-Redirect ke file mentah (teks biasa) dipilih daripada GitHub Pages, karena Cloudflare bisa menyisipkan skrip ke
-halaman HTML dan merusak installer.
-
-## Lisensi dan kredit
-
-Kode di repo ini: MIT. Palet warna: [Dracula](https://draculatheme.com) (MIT) dengan aksen cyan.
-Yang diunduh saat instalasi dan **tidak** didistribusikan ulang oleh repo ini: Oh My Zsh (MIT), NvChad starter
-(Unlicense), Browsh (LGPL-2.1), quickshell dan Caelestia shell/CLI (GPL-3.0, dibangun dari source), serta config
-Hyprland dari `caelestia-dots/caelestia` (dikloning dari upstream).
-
----
-
-### English summary
-
-Personal dotfiles with a one-line installer, in the style of `bash <(curl -fsSL <url>)`.
-`install.sh` detects the OS, fetches this repo to `~/.dotfiles`, and runs the platform installer, which offers
-components (base, shell, tmux, nvim, terminal, browsers, desktop). Supported: **Debian 13** (all user-level components
-installed and verified from scratch in a clean Debian 13 rootfs; the desktop component builds Qt 6.11 from source and is
-beta). Ubuntu passes the CI dry run and a partial real run; Arch, Fedora and macOS are not supported yet.
-Files it would replace are moved to `~/.dotfiles-backup/`, every link is recorded so `uninstall.sh` restores your
-originals, and `--dry-run` shows everything without changing anything. Please read a script before piping it to
-a shell.
+The code in this repository is MIT licensed. The colour palette is [Dracula](https://draculatheme.com) (MIT) with a cyan
+accent. These are downloaded during installation and are **not** redistributed here: Oh My Zsh (MIT), the NvChad starter
+(Unlicense), Browsh (LGPL-2.1), quickshell and the Caelestia shell/CLI (GPL-3.0, built from source), and the Hyprland
+configuration from `caelestia-dots/caelestia` (cloned from upstream).
