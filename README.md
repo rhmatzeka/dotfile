@@ -4,7 +4,7 @@ A one-command setup for a Linux terminal and desktop: zsh, tmux, Neovim, Ghostty
 Hyprland + Caelestia desktop. Nothing is overwritten without a backup, and everything can be undone.
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh)
+bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
 ```
 
 ## Preview
@@ -26,17 +26,18 @@ Use `bash <(...)` rather than `curl | bash`: it keeps your terminal attached, so
 prompt work. **Read a script before you run it.** You can look at this one first:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh | less
+curl -fsSL https://dotfiles.rahmateka.my.id | less
 ```
 
 Every step can be rehearsed without changing anything:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh) --dry-run --all
+bash <(curl -fsSL https://dotfiles.rahmateka.my.id) --dry-run --all
 ```
 
-A short domain (`dotfiles.rahmateka.my.id`) can serve the same script; see [docs/short-domain.md](docs/short-domain.md).
-Until that is set up, use the GitHub URL above.
+The short domain redirects to the script in this repository (see [docs/short-domain.md](docs/short-domain.md)). If it
+ever fails, the same script is at
+`https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh`.
 
 ## What you get
 
@@ -100,7 +101,7 @@ Through `curl`, put the options after the command, for example
 ## Uninstall
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/uninstall.sh)
+bash <(curl -fsSL https://dotfiles.rahmateka.my.id/uninstall.sh)
 ```
 
 The links are removed and your original files come back. Packages, fonts, Oh My Zsh and anything built under `/opt`
