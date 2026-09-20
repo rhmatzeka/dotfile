@@ -1,7 +1,14 @@
-# dotfiles
+# Dotfiles for Debian & Ubuntu: zsh, tmux, Neovim, Ghostty and Hyprland in one command
 
-A one-command setup for a Linux terminal and desktop: zsh, tmux, Neovim, Ghostty, terminal browsers, and an optional
-Hyprland + Caelestia desktop. Nothing is overwritten without a backup, and everything can be undone.
+[![ci](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml/badge.svg)](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/rhmatzeka/dotfile)](LICENSE)
+![Debian 13](https://img.shields.io/badge/Debian-13-A81D33?logo=debian&logoColor=white)
+![Ubuntu 24.04 | 26.04](https://img.shields.io/badge/Ubuntu-24.04%20%7C%2026.04-E95420?logo=ubuntu&logoColor=white)
+
+A one-command **Linux dotfiles installer** for a fast terminal and an optional **Hyprland** desktop with the
+**Caelestia** shell. It sets up **zsh** (Oh My Zsh, starship), **tmux**, **Neovim** with **NvChad** (tree-sitter, LSP),
+**Ghostty**, terminal browsers (Browsh, elinks, w3m) and a Dracula + cyan theme. Nothing is overwritten without a
+backup, and everything can be undone.
 
 ```bash
 bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
@@ -125,6 +132,12 @@ in `install.sh`. Use the helpers in `lib/common.sh` so that `--dry-run` and back
 welcome; please say in the description which system you actually tested on. `tests/clean-rootfs.sh <debian|ubuntu> <codename>`
 builds a minimal system, runs the installer in it as a normal user and checks the result (needs `sudo`, `debootstrap`
 and `systemd-container`).
+
+## Keywords
+
+dotfiles, Linux setup script, Debian dotfiles, Ubuntu dotfiles, one-line installer, Hyprland dotfiles, Hyprland rice,
+Caelestia shell install, Wayland desktop, NvChad setup, Neovim config, zsh + starship + tmux, Ghostty config,
+terminal browser, developer environment, unixporn.
 
 ## License and credits
 
