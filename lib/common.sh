@@ -73,10 +73,14 @@ apt_update_once() {
   APT_UPDATED=1
 }
 
+# pkg_installed PKG  -> 0 only when dpkg says "ii" (fully installed). `dpkg -s` also succeeds for packages that are
+# merely unpacked or half-configured after a failed run, which would hide the failure.
+pkg_installed() { dpkg-query -W -f='${db:Status-Abbrev}\n' "$1" 2>/dev/null | grep -q '^ii'; }
+
 # apt_need pkg...   install only what is missing (release: default suite)
 apt_need() {
   local missing=() p
-  for p in "$@"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
+  for p in "$@"; do pkg_installed "$p" || missing+=("$p"); done
   if [ ${#missing[@]} -eq 0 ]; then ok "already installed: $*"; return 0; fi
   need_sudo; apt_update_once
   info "apt install: ${missing[*]}"

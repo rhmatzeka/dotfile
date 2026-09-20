@@ -227,7 +227,7 @@ comp_browsers() {
   apt_need elinks w3m
   backup_and_link "$C/elinks/elinks.conf" "$HOME/.config/elinks/elinks.conf"
   apt_optional firefox-esr
-  if ! dpkg -s firefox-esr >/dev/null 2>&1; then warn "firefox-esr is unavailable here, so Browsh is skipped (elinks and w3m still work)."; return 0; fi
+  if ! pkg_installed firefox-esr; then warn "firefox-esr is unavailable here, so Browsh is skipped (elinks and w3m still work)."; return 0; fi
   local t; t="$(arch_tag amd64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
   if [ ! -x "$HOME/.local/opt/browsh/browsh" ]; then
     download_bin "https://github.com/browsh-org/browsh/releases/download/v1.8.2/browsh_1.8.2_linux_$t" "$HOME/.local/opt/browsh/browsh" || return 1
