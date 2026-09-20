@@ -27,17 +27,22 @@ Sebelum menjalankan skrip dari internet, **baca dulu isinya**. Ini bisa dilihat 
 
 | OS | Status |
 |---|---|
-| Debian 13 (trixie) | Teruji sebagian (lihat di bawah) |
-| Ubuntu / turunan Debian lain | Belum teruji. Komponen selain `desktop` kemungkinan besar jalan |
+| Debian 13 (trixie) | `base`, `shell`, `tmux`, `nvim`, `terminal`, `browsers` **teruji dari nol** di Debian 13 minimal yang bersih. `desktop`: daftar paketnya tervalidasi, build dari source belum dijalankan ulang (beta) |
+| Ubuntu / turunan Debian lain | CI GitHub (Ubuntu) lulus: dry-run semua komponen selain `desktop`, serta pemasangan asli `shell`, `tmux`, `terminal` dan uninstall. `nvim` dan `browsers` belum teruji di Ubuntu |
 | Arch, Fedora, macOS | **Belum didukung.** Kontribusi sangat diterima (lihat bawah) |
 
-Yang benar-benar dijalankan di HOME kosong (Debian 13): `shell`, `tmux`, `terminal`, `browsers`, dan `nvim`, dengan
-`--dry-run`, pemasangan dari nol, pemasangan saat pengguna sudah punya file sendiri (dibackup), pemasangan ulang
-(tidak mengulang backup), `uninstall` (file asli kembali), dan pewarnaan sintaks Neovim pada file PHP/HTML/JS.
+Yang benar-benar dijalankan:
 
-**Belum teruji:** jalur `apt install` untuk paket yang belum ada (di mesin uji semuanya sudah terpasang, jadi `base`
-hanya teruji sebagian), Ubuntu, dan komponen `desktop`, yang belum pernah dijalankan ulang dari nol lewat skrip ini
-(hanya `--dry-run` dan deteksi "sudah terpasang"). Anggap `desktop` sebagai **beta**.
+- **Debian 13 bersih** (rootfs minimal, hanya 119 paket): pemasangan `base shell tmux nvim terminal browsers` lewat `apt`
+  sampai selesai dengan exit 0. Hasilnya diperiksa: versi semua alat, font Nerd, tmux dan zsh membaca config,
+  Neovim dengan 18 parser dan 7 LSP, serta warna sintaks pada file PHP/HTML/JS.
+- **HOME kosong** (mesin yang paketnya sudah ada): `--dry-run`, pemasangan saat pengguna sudah punya file sendiri
+  (dibackup), pemasangan ulang (tidak mengulang backup), `uninstall` (file asli kembali), dan seluruh alur lewat
+  URL mentah GitHub.
+- **Debian 13, `desktop`**: 79 paket utama dan 5 paket backports disimulasikan (`apt-get -s`), semuanya dapat
+  di-resolve (373 paket total). Yang **belum** dijalankan ulang dari nol adalah build Qt 6.11, quickshell, dan
+  Caelestia dari source lewat skrip ini. Versinya dikunci ke kombinasi yang pernah berhasil dibangun dan dijalankan
+  manual, tapi anggap `desktop` sebagai **beta**.
 
 ## Pemakaian
 
@@ -120,8 +125,9 @@ Hyprland dari `caelestia-dots/caelestia` (dikloning dari upstream).
 
 Personal dotfiles with a one-line installer, in the style of `bash <(curl -fsSL <url>)`.
 `install.sh` detects the OS, fetches this repo to `~/.dotfiles`, and runs the platform installer, which offers
-components (base, shell, tmux, nvim, terminal, browsers, desktop). Supported: **Debian 13** (user-level components
-tested in a clean HOME; the desktop component builds Qt 6.11 from source and is beta, `apt` paths untested). Ubuntu is untested; Arch, Fedora and macOS are not supported yet.
+components (base, shell, tmux, nvim, terminal, browsers, desktop). Supported: **Debian 13** (all user-level components
+installed and verified from scratch in a clean Debian 13 rootfs; the desktop component builds Qt 6.11 from source and is
+beta). Ubuntu passes the CI dry run and a partial real run; Arch, Fedora and macOS are not supported yet.
 Files it would replace are moved to `~/.dotfiles-backup/`, every link is recorded so `uninstall.sh` restores your
 originals, and `--dry-run` shows everything without changing anything. Please read a script before piping it to
 a shell.
