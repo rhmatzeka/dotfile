@@ -10,8 +10,8 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$HERE/../.." && pwd)}"
-# shellcheck source=../../lib/common.sh
+export DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$HERE/.." && pwd)}"
+# shellcheck source=../lib/common.sh
 . "$DOTFILES_DIR/lib/common.sh"
 
 # shellcheck disable=SC2034  # ASSUME_YES / DRY_RUN are read by helpers in lib/common.sh
@@ -55,5 +55,5 @@ cat <<MSG
    ~/.local/opt/browsh     Browsh, ~/.local/opt/nvim, ~/.local/bin/{tree-sitter,starship,browsh,nvim}
    ~/.config/hypr          the Caelestia Hyprland config (only if it has a .rhmatzeka-dotfiles marker)
    /opt/qt-6.11.2, /opt/dart-sass, /usr/local/bin/{qs,sass,caelestia}   the desktop build (sudo rm -rf)
-   apt packages, fonts in ~/.local/share/fonts
+   system packages (apt/pacman/dnf/zypper), fonts in ~/.local/share/fonts
 MSG

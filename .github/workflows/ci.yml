@@ -11,10 +11,10 @@ jobs:
       - name: Tools
         run: sudo apt-get update && sudo apt-get install -y shellcheck lua5.4 jq
       - name: shellcheck
-        run: shellcheck -x -S warning install.sh uninstall.sh lib/common.sh linux/debian/*.sh tests/clean-rootfs.sh bin/web bin/firefox-for-browsh
+        run: shellcheck -x -S warning install.sh uninstall.sh lib/common.sh lib/pkg.sh linux/*.sh linux/debian/*.sh tests/clean-rootfs.sh bin/web bin/firefox-for-browsh
       - name: Syntax
         run: |
-          for f in install.sh uninstall.sh lib/common.sh linux/debian/*.sh; do bash -n "$f"; done
+          for f in install.sh uninstall.sh lib/common.sh lib/pkg.sh linux/*.sh linux/debian/*.sh; do bash -n "$f"; done
           jq . config/caelestia/shell.json >/dev/null
           for f in config/nvim/dotfiles.lua config/caelestia/*.lua; do luac5.4 -p "$f" 2>&1 || lua5.4 -e "assert(loadfile('$f'))"; done
       - name: Dry run (everything except the desktop, which needs Debian 13)

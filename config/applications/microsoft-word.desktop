@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Microsoft Word (web)
+Comment=Microsoft Word in its own window (Microsoft 365 web app; sign in with your Microsoft account)
+Exec=m365 word
+Icon=x-office-document
+Terminal=false
+Categories=Office;WordProcessor;
+StartupWMClass=m365-word

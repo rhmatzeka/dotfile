@@ -5,7 +5,7 @@
 #   bash <(curl -fsSL https://dotfiles.rahmateka.my.id) --dry-run --all
 #
 # `bash <(...)` instead of `curl | bash` keeps the terminal attached, so the menu and sudo prompts work.
-# This file only detects the OS, fetches the repository to ~/.dotfiles and hands over to the
+# This file only detects the distribution family, fetches the repository to ~/.dotfiles and hands over to the
 # installer for that platform. Everything it will do is printed first; --dry-run changes nothing.
 set -euo pipefail
 
@@ -29,36 +29,46 @@ printf '\n%s%s  dotfiles %s%s\n' "$BD" "$CY" "$ACTION" "$OFF"
 printf '%s  https://github.com/rhmatzeka/dotfile%s\n\n' "$DM" "$OFF"
 
 # --- which OS? ---------------------------------------------------------------
-PLATFORM=""
+# Only Linux families are implemented: debian (Debian, Ubuntu, Mint...), arch (Arch, Manjaro, EndeavourOS...),
+# fedora (Fedora, RHEL-likes), suse (openSUSE). The real work is in linux/install.sh; this only says hello.
+FAMILY=""
 case "$(uname -s)" in
   Darwin)
     bad "macOS is not supported yet."
-    say "Only Debian/Ubuntu is implemented and tested. Contributions for other systems are welcome:"
+    say "Supported: Debian/Ubuntu, Arch, Fedora and openSUSE families. Contributions are welcome:"
     say "https://github.com/rhmatzeka/dotfile/issues"
     exit 1 ;;
   Linux)
     ids=" $(. /etc/os-release 2>/dev/null; printf '%s %s' "${ID:-}" "${ID_LIKE:-}") "
     case "$ids" in
-      *" debian "*|*" ubuntu "*) PLATFORM=debian ;;
+      *" debian "*|*" ubuntu "*)              FAMILY=debian ;;
+      *" arch "*)                             FAMILY=arch ;;
+      *" fedora "*|*" rhel "*|*" centos "*)   FAMILY=fedora ;;
+      *" suse "*|*" opensuse "*|*" sles "*)   FAMILY=suse ;;
       *) bad "This Linux distribution is not supported yet (found:$ids)."
-         say "Only Debian/Ubuntu is implemented and tested."
+         say "Supported: Debian/Ubuntu, Arch, Fedora and openSUSE families."
          exit 1 ;;
     esac ;;
   *) bad "Unsupported OS: $(uname -s)"; exit 1 ;;
 esac
-good "Detected: Linux / $PLATFORM"
+good "Detected: Linux / $FAMILY family"
 
 # --- where does the repository live? ------------------------------------------
 # Run from a checkout (bash ./install.sh)? Use it as is. Run through curl? Fetch it to ~/.dotfiles.
 SELF="${BASH_SOURCE[0]:-}"
-if [ -n "$SELF" ] && [ -f "$SELF" ] && [ -f "$(dirname "$SELF")/linux/$PLATFORM/install.sh" ] && [ -z "${DOTFILES_FORCE_CLONE:-}" ]; then
+if [ -n "$SELF" ] && [ -f "$SELF" ] && [ -f "$(dirname "$SELF")/linux/install.sh" ] && [ -z "${DOTFILES_FORCE_CLONE:-}" ]; then
   DOTFILES_DIR="$(cd "$(dirname "$SELF")" && pwd)"
   good "Using this checkout: $DOTFILES_DIR"
 else
   if ! command -v git >/dev/null 2>&1; then
     say "git is needed to fetch the repository."
     command -v sudo >/dev/null 2>&1 || { bad "git and sudo are both missing; install git first."; exit 1; }
-    sudo apt-get update && sudo apt-get install -y git
+    case "$FAMILY" in
+      debian) sudo apt-get update && sudo apt-get install -y git ;;
+      arch)   sudo pacman -S --needed --noconfirm git ;;
+      fedora) sudo dnf install -y git ;;
+      suse)   sudo zypper --non-interactive install git ;;
+    esac
   fi
   if [ -d "$DOTFILES_DIR/.git" ]; then
     say "Updating $DOTFILES_DIR"
@@ -75,7 +85,7 @@ else
 fi
 
 export DOTFILES_DIR
-TARGET="$DOTFILES_DIR/linux/$PLATFORM/$ACTION.sh"
+TARGET="$DOTFILES_DIR/linux/$ACTION.sh"
 [ -f "$TARGET" ] || { bad "Missing $TARGET"; exit 1; }
 printf '\n'
 exec bash "$TARGET" "$@"

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Microsoft Outlook (web)
+Comment=Microsoft Outlook in its own window (Microsoft 365 web app; sign in with your Microsoft account)
+Exec=m365 outlook
+Icon=mail-message
+Terminal=false
+Categories=Office;Email;
+StartupWMClass=m365-outlook

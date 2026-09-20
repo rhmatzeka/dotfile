@@ -1,11 +1,14 @@
-# Dotfiles for Debian & Ubuntu: zsh, tmux, Neovim, Ghostty and Hyprland in one command
+# Linux dotfiles for Debian, Ubuntu, Arch, Fedora and openSUSE: zsh, tmux, Neovim, Ghostty and Hyprland in one command
 
 [![ci](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml/badge.svg)](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/rhmatzeka/dotfile)](LICENSE)
 ![Debian 13](https://img.shields.io/badge/Debian-13-A81D33?logo=debian&logoColor=white)
 ![Ubuntu 24.04 | 26.04](https://img.shields.io/badge/Ubuntu-24.04%20%7C%2026.04-E95420?logo=ubuntu&logoColor=white)
+![Arch Linux](https://img.shields.io/badge/Arch-tested-1793D1?logo=archlinux&logoColor=white)
+![Fedora 44](https://img.shields.io/badge/Fedora-44-51A2DA?logo=fedora&logoColor=white)
+![openSUSE Tumbleweed](https://img.shields.io/badge/openSUSE-Tumbleweed-73BA25?logo=opensuse&logoColor=white)
 
-A one-command **Linux dotfiles installer** for a fast terminal and an optional **Hyprland** desktop with the
+A one-command **Linux dotfiles installer** (Debian/Ubuntu, Arch, Fedora, openSUSE) for a fast terminal and an optional **Hyprland** desktop with the
 **Caelestia** shell. It sets up **zsh** (Oh My Zsh, starship), **tmux**, **Neovim** with **NvChad** (tree-sitter, LSP),
 **Ghostty**, terminal browsers (Browsh, elinks, w3m) and a Dracula + cyan theme. Nothing is overwritten without a
 backup, and everything can be undone.
@@ -49,6 +52,7 @@ ever fails, the same script is at
 | `nvim` | Neovim + NvChad, tree-sitter parsers (html, css, js, php, ...) and LSP servers through Mason |
 | `terminal` | Ghostty config: dark theme, Vim-style keys |
 | `browsers` | Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m |
+| `apps` | Microsoft 365 web apps (Word, Excel, PowerPoint, Outlook, OneDrive) in their own windows, PDF viewer, VLC, GIMP. Pre-selected only when a graphical session is running |
 | `desktop` | Hyprland + Caelestia shell. **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
 
 The default selection is everything except `desktop`.
@@ -57,25 +61,38 @@ The default selection is everything except `desktop`.
 
 | System | Status |
 |---|---|
-| Debian 13 (trixie) | `base`, `shell`, `tmux`, `nvim`, `terminal`, `browsers` installed and checked **from scratch in a clean Debian 13**. `desktop`: the package lists are validated; the source build has not been re-run through this script yet (beta) |
-| Ubuntu 24.04 LTS | Same six components installed and checked from scratch in a clean Ubuntu. `starship` is not in the 24.04 repositories, so its official installer is used; `fastfetch` is skipped; Browsh is skipped (no `firefox-esr` package) while elinks and w3m are installed |
-| Ubuntu 26.04 LTS | Same six components installed and checked from scratch in a clean Ubuntu. `starship` and `fastfetch` come straight from apt here. Browsh is skipped (no `firefox-esr` package); elinks and w3m are installed |
-| Arch, Fedora, macOS | **Not supported yet.** Contributions are welcome (see below) |
+| Debian 13 (trixie) | All components except `desktop` installed and checked **from scratch in a clean Debian 13**. `desktop`: the package lists are validated; the source build has not been re-run through this script yet (beta) |
+| Ubuntu 24.04 LTS, 26.04 LTS | Same components installed and checked from scratch in a clean Ubuntu (earlier revision of the installer). `starship` is not in the 24.04 repositories, so its official installer is used; Browsh is skipped (no `firefox-esr` package) while elinks and w3m are installed |
+| Arch Linux (and Manjaro, EndeavourOS, ... via `ID_LIKE=arch`) | Installed and checked from scratch in the official Arch bootstrap image. Only Arch itself was tested |
+| Fedora 44 (and RHEL-likes via `ID_LIKE`) | Installed and checked from scratch in the official Fedora container image. `starship` is not in the Fedora repositories: its official installer is used. Only Fedora itself was tested |
+| openSUSE Tumbleweed | Installed and checked from scratch in the official Tumbleweed image. Leap and SLE were not tested |
+| Alpine, NixOS, Void, Gentoo, macOS | **Not supported.** Contributions are welcome (see below) |
 
-`desktop` is Debian 13 only because it depends on `trixie-backports` (Hyprland) and on pinned build versions.
+`desktop` (Hyprland + Caelestia) is **Debian 13 only** because it depends on `trixie-backports` and on pinned build
+versions. On the other distributions it is not offered; install Hyprland from your repositories and follow
+[caelestia-dots/caelestia](https://github.com/caelestia-dots/caelestia).
+
+On **Arch**, keep the system up to date (`sudo pacman -Syu`) before running the installer: it installs with
+`pacman -S --needed` and does not refresh the package database itself, to avoid a partial upgrade.
+
+Ghostty has no package on Debian, Ubuntu, Fedora or openSUSE: only its config is installed there. On Arch it is
+installed from the repositories when available.
 
 ### How this was tested
 
-- Real installs into **clean root filesystems** (minimal Debian 13, Ubuntu 24.04 and Ubuntu 26.04 images), as a normal
-  user and with the final version of the installer, then inspected: tool versions, fonts, tmux and zsh reading their
-  config, 18 tree-sitter parsers and 7 LSP servers in Neovim, syntax colours on a PHP file that mixes HTML and
-  JavaScript, and `uninstall`. You can repeat this yourself with `tests/clean-rootfs.sh` (see below).
+- Real installs into **clean root filesystems** (official images, run in `systemd-nspawn`) as a normal user with the
+  final version of the installer: Debian 13, Arch, Fedora 44 and openSUSE Tumbleweed with every component except
+  `desktop`, then inspected: tool versions, fonts, Neovim with 18 tree-sitter parsers and 7 Mason packages, the Microsoft
+  365 launchers, and `uninstall` (14 links removed each time). Ubuntu 24.04 and 26.04 were verified the same way with
+  the previous Debian-only revision. Repeat it yourself with `tests/clean-rootfs.sh` (see below).
 - A user who **already has their own config files**: they are backed up, a second install does not back them up
-  again, and `uninstall` puts the originals back. The whole flow was also run through the public GitHub URL.
+  again, and `uninstall` puts the originals back.
 - `--dry-run` for every component, shellcheck, and a GitHub Actions run on Ubuntu for every push.
-- Failures are not swallowed: a failed `apt` step fails its component and the installer exits non-zero.
+- Failures are not swallowed: a failed package step fails its component and the installer exits non-zero.
 
-**Not tested:** the `desktop` source build from scratch, any distribution not listed above, and ARM machines.
+**Not tested:** the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
+(the launchers and the installer were tested, not a login), Ghostty itself, any distribution or release not listed
+above, and ARM machines.
 
 ## Usage
 
@@ -110,30 +127,33 @@ are left in place; the list is printed at the end.
 ## How it works
 
 The top-level `install.sh` detects the OS, fetches this repository to `~/.dotfiles`, and hands over to the installer for
-that platform (`linux/debian/install.sh`). Configs live in `config/` and are installed as symlinks, so editing them
+that platform (`linux/install.sh`, which uses `lib/pkg.sh` to talk to apt, pacman, dnf or zypper). Configs live in `config/` and are installed as symlinks, so editing them
 in `~/.dotfiles` takes effect immediately. Shared helpers (backup, symlinks, dry run) are in `lib/common.sh`.
 
 ```
 install.sh  uninstall.sh        entry points (OS detection)
-lib/common.sh                   shared helpers
-linux/debian/                   Debian/Ubuntu installer: install.sh, uninstall.sh, desktop.sh
+lib/common.sh  lib/pkg.sh        shared helpers; pkg.sh maps package names per distribution
+linux/                          installer for every family: install.sh, uninstall.sh
+linux/debian/desktop.sh         Hyprland + Caelestia build (Debian 13 only)
 config/                         zsh, starship, tmux, nvim, ghostty, elinks, caelestia
 bin/                            small scripts (web, firefox-for-browsh)
 docs/                           preview placeholder, how-tos
-tests/clean-rootfs.sh           install into a clean Debian/Ubuntu root filesystem and check it
+tests/clean-rootfs.sh           install into a clean Debian/Ubuntu/Arch/Fedora/openSUSE root filesystem and check it
 ```
 
-## Adding another OS
+## Adding another distribution
 
-Create `linux/<name>/install.sh` and `uninstall.sh` (see `linux/debian/` for the shape) and add the OS to the detection
-in `install.sh`. Use the helpers in `lib/common.sh` so that `--dry-run` and backups keep working. Pull requests are
-welcome; please say in the description which system you actually tested on. `tests/clean-rootfs.sh <debian|ubuntu> <codename>`
-builds a minimal system, runs the installer in it as a normal user and checks the result (needs `sudo`, `debootstrap`
-and `systemd-container`).
+Everything distribution-specific lives in `lib/pkg.sh`: a case in `pkg_detect` (which `ID`/`ID_LIKE` belongs to which
+family), and in `pm_is_installed`, `pm_install` and `pm_names` (the package names that differ). Add the same family to
+the detection in the top-level `install.sh`. Use `pkg_need` / `pkg_optional` in components so `--dry-run` and backups
+keep working. Pull requests are welcome; please say in the description which system you actually tested on.
+`tests/clean-rootfs.sh <debian|ubuntu|arch|fedora|opensuse> <codename>` builds a minimal system, runs the installer in it
+as a normal user and checks the result (needs `sudo` and `systemd-container`; `debootstrap` for Debian/Ubuntu, `zstd`
+for Arch).
 
 ## Keywords
 
-dotfiles, Linux setup script, Debian dotfiles, Ubuntu dotfiles, one-line installer, Hyprland dotfiles, Hyprland rice,
+dotfiles, Linux setup script, Debian dotfiles, Ubuntu dotfiles, Arch Linux dotfiles, Fedora dotfiles, openSUSE dotfiles, one-line installer, Hyprland dotfiles, Hyprland rice,
 Caelestia shell install, Wayland desktop, NvChad setup, Neovim config, zsh + starship + tmux, Ghostty config,
 terminal browser, developer environment, unixporn.
 

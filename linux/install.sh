@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Debian / Ubuntu installer, split into components you can pick from a menu.
+# Linux installer (Debian/Ubuntu, Arch, Fedora, openSUSE), split into components you can pick from a menu.
 #
 #   ./install.sh                 interactive menu
 #   ./install.sh --all           every component, including the desktop (long: it builds Qt from source)
@@ -12,14 +12,18 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$HERE/../.." && pwd)}"
-# shellcheck source=../../lib/common.sh
+export DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$HERE/.." && pwd)}"
+# shellcheck source=../lib/common.sh
 . "$DOTFILES_DIR/lib/common.sh"
+# shellcheck source=../lib/pkg.sh
+. "$DOTFILES_DIR/lib/pkg.sh"
+pkg_detect || { fail "This Linux distribution is not supported yet (Debian/Ubuntu, Arch, Fedora and openSUSE families are)."; exit 1; }
 
 C="$DOTFILES_DIR/config"
 ARCH="$(uname -m)"
 
-COMPONENTS=(base shell tmux nvim terminal browsers desktop)
+COMPONENTS=(base shell tmux nvim terminal browsers apps)
+[ "$PKG_FAMILY" = debian ] && COMPONENTS+=(desktop)
 declare -A DESC=(
   [base]="Base packages and the JetBrainsMono Nerd Font"
   [shell]="zsh + Oh My Zsh + starship prompt"
@@ -27,9 +31,12 @@ declare -A DESC=(
   [nvim]="Neovim (NvChad) with tree-sitter parsers and LSP servers"
   [terminal]="Ghostty config (Vim-style keys, dark theme)"
   [browsers]="Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m"
+  [apps]="Microsoft Word/Excel/PowerPoint/Outlook/OneDrive (365 web apps in their own window), PDF viewer, VLC, GIMP"
   [desktop]="Hyprland + Caelestia shell (Debian 13 only; builds Qt 6.11 from source, 1-2 hours)"
 )
 DEFAULTS=(base shell tmux nvim terminal)
+# the everyday apps are big and pointless on a server: pre-select them only when a graphical session is running
+[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] && DEFAULTS+=(apps)
 
 usage() { sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
@@ -62,7 +69,6 @@ export DRY_RUN ASSUME_YES
 # ------------------------------------------------------------ preflight ----
 preflight() {
   [ "$(uname -s)" = Linux ] || die "This installer is for Linux."
-  case " $(os_field ID) $(os_field ID_LIKE) " in *" debian "*|*" ubuntu "*) ;; *) die "Debian/Ubuntu only." ;; esac
   [ "$(id -u)" -ne 0 ] || die "Run this as your normal user, not root: sudo is called only where needed."
   [ "$DRY_RUN" = 1 ] && info "DRY RUN: nothing will be changed."
   ensure_local_bin_in_path
@@ -74,6 +80,9 @@ select_components() {
   if [ -n "$ONLY" ]; then
     IFS=',' read -ra SELECTED <<<"$ONLY"
     for c in "${SELECTED[@]}"; do
+      if [ "$c" = desktop ] && [ "$PKG_FAMILY" != debian ]; then
+        die "the desktop component (Hyprland + Caelestia) is only implemented for Debian 13 so far; on Arch/Fedora/openSUSE install Hyprland from your repositories and follow https://github.com/caelestia-dots/caelestia"
+      fi
       [[ " ${COMPONENTS[*]} " == *" $c "* ]] || die "unknown component: $c (see --list)"
     done
     return
@@ -127,15 +136,15 @@ nerd_font() { # nerd_font Name   e.g. JetBrainsMono  (the .tar.xz is ~7 MB, the 
 # ----------------------------------------------------------- components ----
 comp_base() {
   step "Base packages"
-  apt_need git curl wget unzip xz-utils ca-certificates build-essential fontconfig jq fzf ripgrep htop
-  apt_optional eza zoxide trash-cli fastfetch btop
+  pkg_need git curl wget unzip xz ca-certificates buildtools fontconfig jq fzf ripgrep htop
+  pkg_optional eza zoxide trash-cli fastfetch btop
   nerd_font JetBrainsMono
 }
 
 comp_shell() {
   step "Shell: zsh + Oh My Zsh + starship"
-  apt_need zsh git curl
-  apt_optional starship
+  pkg_need zsh git curl
+  pkg_optional starship
   if ! have starship; then
     info "starship is not in this release's repositories: using the official installer (into ~/.local/bin)"
     if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would run the starship installer"
@@ -147,19 +156,20 @@ comp_shell() {
   backup_and_link "$C/zsh/zshrc" "$HOME/.zshrc"
   backup_and_link "$C/starship/starship.toml" "$HOME/.config/starship.toml"
   if [ "$(basename "${SHELL:-}")" != zsh ] && confirm "Make zsh your default login shell?" n; then
+    have chsh || pkg_optional chsh
     run chsh -s "$(command -v zsh)" "$USER"
   fi
 }
 
 comp_tmux() {
   step "tmux"
-  apt_need tmux
+  pkg_need tmux
   backup_and_link "$C/tmux/tmux.conf" "$HOME/.config/tmux/tmux.conf"
 }
 
 comp_nvim() {
   step "Neovim (NvChad)"
-  apt_need git curl unzip nodejs npm build-essential
+  pkg_need git curl unzip nodejs npm buildtools
   local v
 
   # tree-sitter CLI: recent nvim-treesitter builds parsers with it (Debian's package is too old)
@@ -214,20 +224,21 @@ comp_nvim() {
 
 comp_terminal() {
   step "Terminal: Ghostty config"
-  apt_need zsh
+  pkg_need zsh
   backup_and_link "$C/ghostty/config.ghostty" "$HOME/.config/ghostty/config.ghostty"
+  [ "$PKG_FAMILY" = arch ] && pkg_optional ghostty
   if ! have ghostty; then
-    warn "Ghostty itself is not installed. Debian has no package for it; see https://ghostty.org/docs/install/binary"
+    warn "Ghostty itself is not installed (no distribution package here); see https://ghostty.org/docs/install/binary"
     warn "The config is in place and will be used once you install it."
   fi
 }
 
 comp_browsers() {
   step "Terminal browsers"
-  apt_need elinks w3m
+  pkg_need elinks w3m
   backup_and_link "$C/elinks/elinks.conf" "$HOME/.config/elinks/elinks.conf"
-  apt_optional firefox-esr
-  if ! pkg_installed firefox-esr; then warn "firefox-esr is unavailable here, so Browsh is skipped (elinks and w3m still work)."; return 0; fi
+  pkg_optional firefox
+  if ! pkg_have firefox; then warn "Firefox is unavailable here, so Browsh is skipped (elinks and w3m still work)."; return 0; fi
   local t; t="$(arch_tag amd64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
   if [ ! -x "$HOME/.local/opt/browsh/browsh" ]; then
     download_bin "https://github.com/browsh-org/browsh/releases/download/v1.8.2/browsh_1.8.2_linux_$t" "$HOME/.local/opt/browsh/browsh" || return 1
@@ -238,9 +249,25 @@ comp_browsers() {
   info "use it with:  web https://example.com   (Ctrl+Q quits)"
 }
 
+comp_apps() {
+  step "Everyday apps: Microsoft 365 web apps, PDF viewer, VLC, GIMP"
+  # Microsoft Office has no native Linux version: use Microsoft's own web apps in a dedicated browser window.
+  local b
+  for b in google-chrome-stable google-chrome chromium chromium-browser brave-browser microsoft-edge; do have "$b" && break; b=""; done
+  if [ -z "$b" ]; then info "no Chromium-based browser found: installing Chromium for the app windows"; pkg_need chromium || return 1; fi
+  backup_and_link "$DOTFILES_DIR/bin/m365" "$HOME/.local/bin/m365"
+  local f
+  for f in "$C"/applications/*.desktop; do
+    backup_and_link "$f" "$HOME/.local/share/applications/$(basename "$f")"
+  done
+  [ "$DRY_RUN" = 1 ] || { have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null; true; }
+  pkg_optional evince vlc gimp
+  info "Word, Excel, PowerPoint, Outlook and OneDrive are now in your app menu (sign in with your Microsoft account)."
+}
+
 comp_desktop() {
   step "Desktop: Hyprland + Caelestia"
-  bash "$HERE/desktop.sh"
+  bash "$HERE/debian/desktop.sh"
 }
 
 # ----------------------------------------------------------------- main ----

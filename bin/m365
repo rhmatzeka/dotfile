@@ -1,0 +1,18 @@
+#!/bin/sh
+# Open a Microsoft 365 web app in its own window (Chromium "app mode"): m365 word|excel|powerpoint|outlook|onedrive
+# There is no native Microsoft Office for Linux; these are Microsoft's own web apps. Sign in with your account.
+case "$1" in
+  word)       url=https://www.office.com/launch/word ;;
+  excel)      url=https://www.office.com/launch/excel ;;
+  powerpoint) url=https://www.office.com/launch/powerpoint ;;
+  outlook)    url=https://outlook.office.com/mail/ ;;
+  onedrive)   url=https://onedrive.live.com/ ;;
+  *) echo "usage: m365 word|excel|powerpoint|outlook|onedrive" >&2; exit 2 ;;
+esac
+for b in google-chrome-stable google-chrome chromium chromium-browser brave-browser microsoft-edge microsoft-edge-stable; do
+  if command -v "$b" >/dev/null 2>&1; then
+    exec "$b" --app="$url" --class="m365-$1" --name="m365-$1"
+  fi
+done
+echo "m365: no Chromium-based browser found (chromium, chrome, brave or edge). Opening the default browser instead." >&2
+exec xdg-open "$url"
