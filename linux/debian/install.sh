@@ -163,7 +163,7 @@ comp_nvim() {
   local v
 
   # tree-sitter CLI: recent nvim-treesitter builds parsers with it (Debian's package is too old)
-  v="$(tree-sitter --version 2>/dev/null | awk '{print $2}')"
+  v="$(tree-sitter --version 2>/dev/null | awk '{print $2}')" || v=""   # `|| v=""`: with pipefail+errexit a missing tool would abort here
   if [ -z "$v" ] || ! version_ge "$v" 0.25.0; then
     local t; t="$(arch_tag x64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
     info "installing the tree-sitter CLI into ~/.local/bin"
@@ -171,7 +171,7 @@ comp_nvim() {
   else ok "tree-sitter CLI $v"; fi
 
   # Neovim >= 0.12 (NvChad's current tree-sitter integration needs it)
-  v="$(nvim --version 2>/dev/null | sed -n '1s/.*v\([0-9.]*\).*/\1/p')"
+  v="$(nvim --version 2>/dev/null | sed -n '1s/.*v\([0-9.]*\).*/\1/p')" || v=""
   if [ -z "$v" ] || ! version_ge "$v" 0.12.0; then
     local t; t="$(arch_tag x86_64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
     info "installing Neovim (latest release) into ~/.local/opt/nvim"
