@@ -99,15 +99,24 @@ tapi mohon jelaskan di deskripsinya OS mana yang benar-benar diuji.
 URL mentah selalu jalan:
 `bash <(curl -fsSL https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh)`
 
-Untuk `dotfiles.rahmateka.my.id` lewat Cloudflare:
+Untuk `dotfiles.rahmateka.my.id` lewat Cloudflare (DNS zona `rahmateka.my.id` ada di Cloudflare):
 
-1. **DNS**: tambah record `AAAA`, nama `dotfiles`, isi `100::`, **Proxied** (awan oranye). Isinya bebas, tidak pernah dituju.
-2. **Rules > Redirect Rules > Create rule** (dua aturan):
-   - *URI Full* sama dengan `https://dotfiles.rahmateka.my.id/` maka *Static redirect* ke
-     `https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh`, status 302.
-   - *URI Full* sama dengan `https://dotfiles.rahmateka.my.id/uninstall.sh` maka redirect ke
-     `https://raw.githubusercontent.com/rhmatzeka/dotfile/main/uninstall.sh`, status 302.
-3. Uji: `curl -fsSL https://dotfiles.rahmateka.my.id | head -3` harus menampilkan `#!/usr/bin/env bash`.
+1. **DNS**: kalau zona sudah punya wildcard `*` yang **Proxied** (awan oranye), tidak perlu record baru, karena
+   `dotfiles.rahmateka.my.id` sudah menuju Cloudflare (untuk zona ini memang sudah, tapi masih menjawab error 526
+   dari server asal, sampai aturan di bawah dibuat). Kalau belum ada wildcard, tambah record `AAAA`, nama `dotfiles`,
+   isi `100::`, **Proxied**. Isinya bebas, tidak pernah dituju.
+2. **Rules > Redirect Rules > Create rule**, dua aturan. Pilih *Custom filter expression* lalu *Edit expression* dan
+   tempel:
+
+   | Nama aturan | Ekspresi | Redirect ke (Static, status 302) |
+   |---|---|---|
+   | `dotfiles install` | `(http.host eq "dotfiles.rahmateka.my.id" and http.request.uri.path eq "/")` | `https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh` |
+   | `dotfiles uninstall` | `(http.host eq "dotfiles.rahmateka.my.id" and http.request.uri.path eq "/uninstall.sh")` | `https://raw.githubusercontent.com/rhmatzeka/dotfile/main/uninstall.sh` |
+
+   Biarkan *Preserve query string* mati. Klik *Deploy*.
+3. Uji: `curl -fsSL https://dotfiles.rahmateka.my.id | head -3` harus menampilkan `#!/usr/bin/env bash`, dan
+   `curl -sI https://dotfiles.rahmateka.my.id/uninstall.sh` harus menjawab `302` ke `raw.githubusercontent.com`.
+   Aturan Cloudflare biasanya aktif dalam hitungan detik.
 
 Redirect ke file mentah (teks biasa) dipilih daripada GitHub Pages, karena Cloudflare bisa menyisipkan skrip ke
 halaman HTML dan merusak installer.
