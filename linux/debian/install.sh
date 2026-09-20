@@ -113,13 +113,13 @@ arch_tag() { # arch_tag x64-name arm64-name
   case "$ARCH" in x86_64|amd64) printf '%s' "$1" ;; aarch64|arm64) printf '%s' "$2" ;; *) return 1 ;; esac
 }
 
-nerd_font() { # nerd_font Name   e.g. JetBrainsMono
+nerd_font() { # nerd_font Name   e.g. JetBrainsMono  (the .tar.xz is ~7 MB, the .zip ~128 MB)
   local name="$1" dir="$HOME/.local/share/fonts/${1}Nerd"
   if fc-list 2>/dev/null | grep -qi "$name Nerd"; then ok "font already present: $name Nerd Font"; return 0; fi
   if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would install the $name Nerd Font"; return 0; fi
   local tmp; tmp="$(mktemp)"
-  fetch "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$name.zip" "$tmp" || return 1
-  mkdir -p "$dir" && unzip -qo "$tmp" -d "$dir" && rm -f "$tmp"
+  fetch "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$name.tar.xz" "$tmp" || return 1
+  mkdir -p "$dir" && tar -xJf "$tmp" -C "$dir" && rm -f "$tmp"
   fc-cache -f >/dev/null 2>&1
   ok "installed $name Nerd Font"
 }

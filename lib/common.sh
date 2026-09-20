@@ -133,7 +133,9 @@ fetch() {
   local url="$1" dest="$2"
   if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would download $url"; return 0; fi
   mkdir -p "$(dirname "$dest")"
-  curl -fsSL --retry 3 --retry-delay 2 -o "$dest" "$url" || { fail "download failed: $url"; return 1; }
+  # fail instead of hanging forever: give up if the connection stalls (under 1 KB/s for 60 s)
+  curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 --speed-limit 1024 --speed-time 60 -o "$dest" "$url" \
+    || { fail "download failed: $url"; return 1; }
 }
 
 # git_clone URL DEST [REF]  -> clone once; if it exists, leave it alone
