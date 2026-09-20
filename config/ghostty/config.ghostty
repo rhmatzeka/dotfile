@@ -1,0 +1,55 @@
+# ~/.config/ghostty/config.ghostty  (managed by rhmatzeka/dotfile)
+# Dark theme on the Dracula palette with a cyan accent. Needs JetBrainsMono Nerd Font (installed by the "base" component).
+
+command = zsh
+font-family = JetBrainsMono Nerd Font
+font-size = 12
+window-padding-x = 10
+window-padding-y = 8
+background-opacity = 0.90
+cursor-style = bar
+confirm-close-surface = false
+
+background = 0d1117
+foreground = eff1f4
+cursor-color = 00d9ff
+selection-background = 1f3a4d
+selection-foreground = eff1f4
+
+palette = 0=#1b1f27
+palette = 1=#ff5555
+palette = 2=#50fa7b
+palette = 3=#f1fa8c
+palette = 4=#bd93f9
+palette = 5=#ff79c6
+palette = 6=#00d9ff
+palette = 7=#eff1f4
+palette = 8=#6c757d
+palette = 9=#ff6e6e
+palette = 10=#69ff94
+palette = 11=#ffffa5
+palette = 12=#d6acff
+palette = 13=#ff92df
+palette = 14=#01cbc6
+palette = 15=#ffffff
+
+# --- Vim-style navigation (arrow keys keep working) ---
+# Switch tab: Ctrl+Shift+H / L
+keybind = ctrl+shift+h=previous_tab
+keybind = ctrl+shift+l=next_tab
+# Move between splits: Ctrl+Alt+H / J / K / L
+keybind = ctrl+alt+h=goto_split:left
+keybind = ctrl+alt+j=goto_split:down
+keybind = ctrl+alt+k=goto_split:up
+keybind = ctrl+alt+l=goto_split:right
+# Resize a split: Ctrl+Alt+Shift+H / J / K / L
+keybind = ctrl+alt+shift+h=resize_split:left,10
+keybind = ctrl+alt+shift+j=resize_split:down,10
+keybind = ctrl+alt+shift+k=resize_split:up,10
+keybind = ctrl+alt+shift+l=resize_split:right,10
+# Extend a text selection: Shift+H / J / K / L (only while text is selected,
+# so typing capital H J K L stays normal)
+keybind = performable:shift+h=adjust_selection:left
+keybind = performable:shift+j=adjust_selection:down
+keybind = performable:shift+k=adjust_selection:up
+keybind = performable:shift+l=adjust_selection:right

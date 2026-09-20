@@ -1,0 +1,61 @@
+# ~/.config/starship.toml  (managed by rhmatzeka/dotfile)
+# Two-line prompt: context on top, an input line below. Dracula palette with a cyan accent.
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = true
+command_timeout = 800
+
+format = """
+$directory$git_branch$git_status$nodejs$python$rust$php$golang$cmd_duration
+$character"""
+
+[character]
+success_symbol = "[❯](bold #00d9ff)"
+error_symbol   = "[❯](bold #ff5555)"
+vimcmd_symbol  = "[❮](bold #50fa7b)"
+
+[directory]
+style = "bold #00d9ff"
+truncation_length = 3
+truncation_symbol = "…/"
+read_only = " 󰌾"
+
+[git_branch]
+symbol = " "
+style = "bold #ff79c6"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "#ffb86c"
+format = '([\[$all_status$ahead_behind\]]($style) )'
+
+[cmd_duration]
+min_time = 2000
+style = "#6272a4"
+format = "[took $duration]($style) "
+
+[nodejs]
+symbol = " "
+style = "#50fa7b"
+format = "[$symbol($version)]($style) "
+
+[python]
+symbol = " "
+style = "#f1fa8c"
+format = "[$symbol($version)]($style) "
+
+[rust]
+symbol = " "
+style = "#ffb86c"
+format = "[$symbol($version)]($style) "
+
+[php]
+symbol = " "
+style = "#bd93f9"
+format = "[$symbol($version)]($style) "
+
+[golang]
+symbol = " "
+style = "#8be9fd"
+format = "[$symbol($version)]($style) "

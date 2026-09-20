@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+# Debian / Ubuntu installer, split into components you can pick from a menu.
+#
+#   ./install.sh                 interactive menu
+#   ./install.sh --all           every component, including the desktop (long: it builds Qt from source)
+#   ./install.sh --only shell,nvim
+#   ./install.sh --dry-run       show what would happen, change nothing
+#   ./install.sh --yes           no questions; answer each with its default
+#   ./install.sh --list          list the components
+#
+# Normally started through the top-level install.sh (which also fetches the repository).
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$HERE/../.." && pwd)}"
+# shellcheck source=../../lib/common.sh
+. "$DOTFILES_DIR/lib/common.sh"
+
+C="$DOTFILES_DIR/config"
+ARCH="$(uname -m)"
+
+COMPONENTS=(base shell tmux nvim terminal browsers desktop)
+declare -A DESC=(
+  [base]="Base packages and the JetBrainsMono Nerd Font"
+  [shell]="zsh + Oh My Zsh + starship prompt"
+  [tmux]="tmux with a cyan/Dracula theme"
+  [nvim]="Neovim (NvChad) with tree-sitter parsers and LSP servers"
+  [terminal]="Ghostty config (Vim-style keys, dark theme)"
+  [browsers]="Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m"
+  [desktop]="Hyprland + Caelestia shell (Debian 13 only; builds Qt 6.11 from source, 1-2 hours)"
+)
+DEFAULTS=(base shell tmux nvim terminal)
+
+usage() { sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+list_components() {
+  local c mark
+  for c in "${COMPONENTS[@]}"; do
+    mark=" "; for d in "${DEFAULTS[@]}"; do [ "$c" = "$d" ] && mark="*"; done
+    printf '  %s %-9s %s\n' "$mark" "$c" "${DESC[$c]}"
+  done
+  printf '\n  * = selected by default\n'
+}
+
+# ------------------------------------------------------------ arguments ----
+SELECTED=(); ALL=0; ONLY=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -y|--yes)     ASSUME_YES=1 ;;
+    -n|--dry-run) DRY_RUN=1 ;;
+    --all)        ALL=1 ;;
+    --only)       shift; ONLY="${1:-}" ;;
+    --only=*)     ONLY="${1#--only=}" ;;
+    --list)       list_components; exit 0 ;;
+    -h|--help)    usage; exit 0 ;;
+    *) die "unknown option: $1 (try --help)" ;;
+  esac
+  shift
+done
+export DRY_RUN ASSUME_YES
+
+# ------------------------------------------------------------ preflight ----
+preflight() {
+  [ "$(uname -s)" = Linux ] || die "This installer is for Linux."
+  case " $(os_field ID) $(os_field ID_LIKE) " in *" debian "*|*" ubuntu "*) ;; *) die "Debian/Ubuntu only." ;; esac
+  [ "$(id -u)" -ne 0 ] || die "Run this as your normal user, not root: sudo is called only where needed."
+  [ "$DRY_RUN" = 1 ] && info "DRY RUN: nothing will be changed."
+  ensure_local_bin_in_path
+}
+
+select_components() {
+  local c ans n
+  if [ "$ALL" = 1 ]; then SELECTED=("${COMPONENTS[@]}"); return; fi
+  if [ -n "$ONLY" ]; then
+    IFS=',' read -ra SELECTED <<<"$ONLY"
+    for c in "${SELECTED[@]}"; do
+      [[ " ${COMPONENTS[*]} " == *" $c "* ]] || die "unknown component: $c (see --list)"
+    done
+    return
+  fi
+  if [ "$ASSUME_YES" = 1 ] || ! interactive; then SELECTED=("${DEFAULTS[@]}"); return; fi
+  printf '\n  Components:\n\n'
+  n=1; for c in "${COMPONENTS[@]}"; do
+    local mark=" "; for d in "${DEFAULTS[@]}"; do [ "$c" = "$d" ] && mark="*"; done
+    printf '   %d. [%s] %-9s %s\n' "$n" "$mark" "$c" "${DESC[$c]}"; n=$((n+1))
+  done
+  printf '\n  Pick numbers (e.g. "1 2 4"), "a" for all, Enter for the defaults (*), "q" to quit: ' >&2
+  read -r ans </dev/tty || ans=""
+  case "$ans" in
+    "") SELECTED=("${DEFAULTS[@]}") ;;
+    a|A) SELECTED=("${COMPONENTS[@]}") ;;
+    q|Q) info "Nothing installed."; exit 0 ;;
+    *) for n in ${ans//,/ }; do
+         [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 1 ] && [ "$n" -le "${#COMPONENTS[@]}" ] || die "not a valid choice: $n"
+         SELECTED+=("${COMPONENTS[$((n-1))]}")
+       done ;;
+  esac
+}
+
+# ------------------------------------------------------------ helpers ----
+download_bin() { # download_bin URL DEST   (a .gz is unpacked; result is made executable)
+  local url="$1" dest="$2"
+  if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would download $url -> ${dest/#$HOME/~}"; return 0; fi
+  mkdir -p "$(dirname "$dest")"
+  case "$url" in
+    *.gz) curl -fsSL --retry 3 "$url" | gunzip >"$dest" ;;
+    *)    curl -fsSL --retry 3 -o "$dest" "$url" ;;
+  esac || { fail "download failed: $url"; return 1; }
+  chmod +x "$dest"
+}
+
+arch_tag() { # arch_tag x64-name arm64-name
+  case "$ARCH" in x86_64|amd64) printf '%s' "$1" ;; aarch64|arm64) printf '%s' "$2" ;; *) return 1 ;; esac
+}
+
+nerd_font() { # nerd_font Name   e.g. JetBrainsMono
+  local name="$1" dir="$HOME/.local/share/fonts/${1}Nerd"
+  if fc-list 2>/dev/null | grep -qi "$name Nerd"; then ok "font already present: $name Nerd Font"; return 0; fi
+  if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would install the $name Nerd Font"; return 0; fi
+  local tmp; tmp="$(mktemp)"
+  fetch "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$name.zip" "$tmp" || return 1
+  mkdir -p "$dir" && unzip -qo "$tmp" -d "$dir" && rm -f "$tmp"
+  fc-cache -f >/dev/null 2>&1
+  ok "installed $name Nerd Font"
+}
+
+# ----------------------------------------------------------- components ----
+comp_base() {
+  step "Base packages"
+  apt_need git curl wget unzip xz-utils ca-certificates build-essential fontconfig jq fzf ripgrep htop
+  apt_optional eza zoxide trash-cli fastfetch btop
+  nerd_font JetBrainsMono
+}
+
+comp_shell() {
+  step "Shell: zsh + Oh My Zsh + starship"
+  apt_need zsh git curl
+  apt_optional starship
+  if ! have starship; then
+    info "starship is not in this release's repositories: using the official installer (into ~/.local/bin)"
+    if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would run the starship installer"
+    else mkdir -p "$HOME/.local/bin" && curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin" >/dev/null || return 1; fi
+  fi
+  git_clone https://github.com/ohmyzsh/ohmyzsh "$HOME/.oh-my-zsh"
+  git_clone https://github.com/zsh-users/zsh-autosuggestions "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+  git_clone https://github.com/zsh-users/zsh-syntax-highlighting "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+  backup_and_link "$C/zsh/zshrc" "$HOME/.zshrc"
+  backup_and_link "$C/starship/starship.toml" "$HOME/.config/starship.toml"
+  if [ "$(basename "${SHELL:-}")" != zsh ] && confirm "Make zsh your default login shell?" n; then
+    run chsh -s "$(command -v zsh)" "$USER"
+  fi
+}
+
+comp_tmux() {
+  step "tmux"
+  apt_need tmux
+  backup_and_link "$C/tmux/tmux.conf" "$HOME/.config/tmux/tmux.conf"
+}
+
+comp_nvim() {
+  step "Neovim (NvChad)"
+  apt_need git curl unzip nodejs npm build-essential
+  local v
+
+  # tree-sitter CLI: recent nvim-treesitter builds parsers with it (Debian's package is too old)
+  v="$(tree-sitter --version 2>/dev/null | awk '{print $2}')"
+  if [ -z "$v" ] || ! version_ge "$v" 0.25.0; then
+    local t; t="$(arch_tag x64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
+    info "installing the tree-sitter CLI into ~/.local/bin"
+    download_bin "https://github.com/tree-sitter/tree-sitter/releases/latest/download/tree-sitter-linux-$t.gz" "$HOME/.local/bin/tree-sitter" || return 1
+  else ok "tree-sitter CLI $v"; fi
+
+  # Neovim >= 0.12 (NvChad's current tree-sitter integration needs it)
+  v="$(nvim --version 2>/dev/null | sed -n '1s/.*v\([0-9.]*\).*/\1/p')"
+  if [ -z "$v" ] || ! version_ge "$v" 0.12.0; then
+    local t; t="$(arch_tag x86_64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
+    info "installing Neovim (latest release) into ~/.local/opt/nvim"
+    if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would download the Neovim tarball"
+    else
+      local tmp; tmp="$(mktemp)"
+      fetch "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-$t.tar.gz" "$tmp" || return 1
+      rm -rf "$HOME/.local/opt/nvim" && mkdir -p "$HOME/.local/opt/nvim" "$HOME/.local/bin"
+      tar -xzf "$tmp" -C "$HOME/.local/opt/nvim" --strip-components=1 && rm -f "$tmp"
+      ln -sfn "$HOME/.local/opt/nvim/bin/nvim" "$HOME/.local/bin/nvim"
+    fi
+  else ok "Neovim $v"; fi
+
+  # the NvChad starter, unless the user already has an nvim config of their own
+  local cfg="$HOME/.config/nvim" marker="$HOME/.config/nvim/.rhmatzeka-dotfiles"
+  if [ -e "$cfg" ] && [ ! -e "$marker" ]; then
+    warn "an nvim config already exists at ~/.config/nvim: leaving it untouched."
+    warn "Add $C/nvim/dotfiles.lua to its lua/plugins/ if you want the extra parsers/LSP."
+    return 0
+  fi
+  if [ ! -e "$cfg" ]; then
+    info "cloning the NvChad starter"
+    if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would clone NvChad/starter"
+    else git clone -q --depth 1 https://github.com/NvChad/starter "$cfg" && rm -rf "$cfg/.git" && : >"$marker"; fi
+  fi
+  [ "$DRY_RUN" = 1 ] || mkdir -p "$cfg/lua/plugins"
+  backup_and_link "$C/nvim/dotfiles.lua" "$cfg/lua/plugins/dotfiles.lua"
+
+  [ "$DRY_RUN" = 1 ] && { info "[dry-run] would sync plugins, build tree-sitter parsers and install LSP servers"; return 0; }
+  info "syncing plugins (first run, a minute or two)"
+  timeout 600 nvim --headless "+Lazy! sync" +qa >/dev/null 2>&1 || warn "plugin sync reported a problem; it will retry when you open nvim"
+  info "building tree-sitter parsers"
+  timeout 600 nvim --headless "+Lazy load nvim-treesitter" "+lua local ok,e=pcall(function() require('nvim-treesitter').install(dofile(vim.fn.stdpath('config')..'/lua/plugins/dotfiles.lua')[1].opts.ensure_installed):wait(540000) end) if not ok then print(e) end" +qa >/dev/null 2>&1 \
+    || warn "parser build reported a problem; check :checkhealth nvim-treesitter"
+  info "installing LSP servers and formatters (Mason)"
+  timeout 900 nvim --headless "+Lazy load mason.nvim" "+MasonInstall $(paste -sd' ' "$C/nvim/mason-packages")" "+qall" >/dev/null 2>&1 \
+    || warn "Mason reported a problem; run :Mason inside nvim to see which package failed"
+  ok "Neovim is ready"
+}
+
+comp_terminal() {
+  step "Terminal: Ghostty config"
+  apt_need zsh
+  backup_and_link "$C/ghostty/config.ghostty" "$HOME/.config/ghostty/config.ghostty"
+  if ! have ghostty; then
+    warn "Ghostty itself is not installed. Debian has no package for it; see https://ghostty.org/docs/install/binary"
+    warn "The config is in place and will be used once you install it."
+  fi
+}
+
+comp_browsers() {
+  step "Terminal browsers"
+  apt_need elinks w3m
+  backup_and_link "$C/elinks/elinks.conf" "$HOME/.config/elinks/elinks.conf"
+  apt_optional firefox-esr
+  if ! dpkg -s firefox-esr >/dev/null 2>&1; then warn "firefox-esr is unavailable here, so Browsh is skipped (elinks and w3m still work)."; return 0; fi
+  local t; t="$(arch_tag amd64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
+  if [ ! -x "$HOME/.local/opt/browsh/browsh" ]; then
+    download_bin "https://github.com/browsh-org/browsh/releases/download/v1.8.2/browsh_1.8.2_linux_$t" "$HOME/.local/opt/browsh/browsh" || return 1
+  else ok "Browsh already installed"; fi
+  [ "$DRY_RUN" = 1 ] || { mkdir -p "$HOME/.local/bin"; ln -sfn "$HOME/.local/opt/browsh/browsh" "$HOME/.local/bin/browsh"; }
+  backup_and_link "$DOTFILES_DIR/bin/firefox-for-browsh" "$HOME/.local/opt/browsh/firefox-for-browsh"
+  backup_and_link "$DOTFILES_DIR/bin/web" "$HOME/.local/bin/web"
+  info "use it with:  web https://example.com   (Ctrl+Q quits)"
+}
+
+comp_desktop() {
+  step "Desktop: Hyprland + Caelestia"
+  bash "$HERE/desktop.sh"
+}
+
+# ----------------------------------------------------------------- main ----
+preflight
+select_components
+[ "${#SELECTED[@]}" -gt 0 ] || { info "Nothing selected."; exit 0; }
+printf '\n  Installing: %s\n' "${SELECTED[*]}"
+[ "$DRY_RUN" = 1 ] || confirm "Continue?" y || { info "Cancelled."; exit 0; }
+
+# keep components in canonical order, run each in its own subshell so one failure does not stop the rest
+OK=(); FAILED=()
+for c in "${COMPONENTS[@]}"; do
+  [[ " ${SELECTED[*]} " == *" $c "* ]] || continue
+  if ( set -e; "comp_$c" ); then OK+=("$c"); else FAILED+=("$c"); fail "component failed: $c"; fi
+done
+
+printf '\n'
+[ ${#OK[@]} -gt 0 ]     && ok "Done: ${OK[*]}"
+[ ${#FAILED[@]} -gt 0 ] && fail "Failed: ${FAILED[*]} (run again with --only ${FAILED[*]// /,} after fixing the cause)"
+if [ "$DRY_RUN" != 1 ] && [ ${#OK[@]} -gt 0 ]; then
+  [[ " ${OK[*]} " == *" shell "* ]] && info "Open a new terminal, or run: exec zsh"
+  [[ " ${OK[*]} " == *" desktop "* ]] && info "Log out and choose the Hyprland session."
+  [ -d "$BACKUP_ROOT/$STAMP" ] && info "Files that were replaced are in ${BACKUP_ROOT/#$HOME/~}/$STAMP"
+fi
+[ ${#FAILED[@]} -eq 0 ]

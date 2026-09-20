@@ -1,0 +1,14 @@
+#!/bin/sh
+# Browsh (Firefox ESR rendered in the terminal). Usage: web [url]   (Ctrl+Q to quit)
+# Installed by the "browsers" component of rhmatzeka/dotfile.
+PROFILE="$HOME/.config/browsh/firefox_profile"
+# a crashed session can leave its headless Firefox behind ("A headless Firefox is already running"):
+# if no browsh is running but that Firefox is, it is an orphan, so remove it first
+if ! pgrep -x browsh >/dev/null && pgrep -f -- "--profile $PROFILE" >/dev/null; then
+  pkill -f -- "--profile $PROFILE"; sleep 2
+fi
+"$HOME/.local/bin/browsh" --firefox.path "$HOME/.local/opt/browsh/firefox-for-browsh" --startup-url "${1:-https://duckduckgo.com}"
+rc=$?
+# make sure nothing is left running after quitting or crashing
+pgrep -x browsh >/dev/null || pkill -f -- "--profile $PROFILE" 2>/dev/null
+exit $rc

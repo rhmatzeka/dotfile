@@ -1,0 +1,14 @@
+{
+    "general": {
+        "idle": {
+            "lockBeforeSleep": true,
+            "inhibitWhenAudio": true,
+            "inhibitWhenCharging": true,
+            "timeouts": [
+                { "timeout": 600,  "idleAction": "lock" },
+                { "timeout": 600,  "idleAction": "dpms off", "returnAction": "dpms on" },
+                { "timeout": 1200, "idleAction": ["suspendThenHibernate"] }
+            ]
+        }
+    }
+}
