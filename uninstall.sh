@@ -10,4 +10,10 @@ SELF="${BASH_SOURCE[0]:-}"
 if [ -n "$SELF" ] && [ -f "$SELF" ] && [ -f "$(dirname "$SELF")/install.sh" ]; then
   exec bash "$(dirname "$SELF")/install.sh" --uninstall "$@"
 fi
-exec bash <(curl -fsSL "${DOTFILES_INSTALL_URL:-https://dotfiles.rahmateka.my.id}") --uninstall "$@"
+
+# Started through curl: fetch the installer from the repository itself (works even without the short domain).
+URL="${DOTFILES_INSTALL_URL:-https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh}"
+TMP="$(mktemp)"
+trap 'rm -f "$TMP"' EXIT
+curl -fsSL "$URL" -o "$TMP" || { echo "  ✖ could not download $URL" >&2; exit 1; }
+bash "$TMP" --uninstall "$@"
