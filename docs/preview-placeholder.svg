@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Video preview coming soon">
-  <rect width="960" height="540" rx="16" fill="#0d1117"/>
-  <rect x="1" y="1" width="958" height="538" rx="15" fill="none" stroke="#30363d" stroke-width="2"/>
-  <circle cx="480" cy="235" r="62" fill="none" stroke="#00d9ff" stroke-width="4"/>
-  <path d="M462 205 L462 265 L512 235 Z" fill="#00d9ff"/>
-  <text x="480" y="352" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="30" fill="#c9d1d9">Preview video coming soon</text>
-  <text x="480" y="396" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#6272a4">see docs/adding-a-preview.md</text>
-</svg>

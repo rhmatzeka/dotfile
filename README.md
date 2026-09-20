@@ -9,16 +9,11 @@ bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
 
 ## Preview
 
-<!--
-  ADD YOUR VIDEO HERE (full instructions: docs/adding-a-preview.md)
-  1. Open this file on github.com and click the pencil icon (Edit).
-  2. Drag and drop your .mp4 / .mov into the editor. GitHub uploads it and inserts a link like
-     https://github.com/user-attachments/assets/<id>
-  3. Keep that link on a line of its own (that turns it into a player), delete the placeholder image below, commit.
-  A GIF works too: ![Demo](docs/demo.gif)
--->
+<video src="https://github.com/rhmatzeka/dotfile/raw/main/docs/preview.mp4" poster="https://github.com/rhmatzeka/dotfile/raw/main/docs/preview-poster.jpg" controls muted width="100%"></video>
 
-![Preview video coming soon](docs/preview-placeholder.svg)
+[![Preview: the Hyprland + Caelestia desktop](docs/preview-poster.jpg)](docs/preview.mp4)
+
+If the player above does not load, click the picture to open the video.
 
 ## Install
 
