@@ -11,7 +11,7 @@ jobs:
       - name: Tools
         run: sudo apt-get update && sudo apt-get install -y shellcheck lua5.4 jq
       - name: shellcheck
-        run: shellcheck -x -S warning install.sh uninstall.sh lib/common.sh linux/debian/*.sh bin/web bin/firefox-for-browsh
+        run: shellcheck -x -S warning install.sh uninstall.sh lib/common.sh linux/debian/*.sh tests/clean-rootfs.sh bin/web bin/firefox-for-browsh
       - name: Syntax
         run: |
           for f in install.sh uninstall.sh lib/common.sh linux/debian/*.sh; do bash -n "$f"; done

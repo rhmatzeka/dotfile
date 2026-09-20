@@ -57,7 +57,7 @@ The default selection is everything except `desktop`.
 | System | Status |
 |---|---|
 | Debian 13 (trixie) | `base`, `shell`, `tmux`, `nvim`, `terminal`, `browsers` installed and checked **from scratch in a clean Debian 13**. `desktop`: the package lists are validated; the source build has not been re-run through this script yet (beta) |
-| Ubuntu 24.04 LTS | Same six components installed and checked from scratch in a clean Ubuntu. Not in Ubuntu's repositories, so handled differently: `starship` uses its official installer, `fastfetch` is skipped, and Browsh is skipped (no `firefox-esr` package), while elinks and w3m are installed |
+| Ubuntu 24.04 LTS | Same six components installed and checked from scratch in a clean Ubuntu. `starship` is not in the 24.04 repositories, so its official installer is used; `fastfetch` is skipped; Browsh is skipped (no `firefox-esr` package) while elinks and w3m are installed |
 | Ubuntu 26.04 LTS | Same six components installed and checked from scratch in a clean Ubuntu. `starship` and `fastfetch` come straight from apt here. Browsh is skipped (no `firefox-esr` package); elinks and w3m are installed |
 | Arch, Fedora, macOS | **Not supported yet.** Contributions are welcome (see below) |
 
@@ -65,9 +65,10 @@ The default selection is everything except `desktop`.
 
 ### How this was tested
 
-- Real installs into **clean root filesystems** (a minimal Debian 13 and minimal Ubuntu images), as a normal user, with
-  the results inspected afterwards: tool versions, fonts, tmux and zsh reading their config, 18 tree-sitter parsers and
-  7 LSP servers in Neovim, and syntax colours on a PHP file that mixes HTML and JavaScript.
+- Real installs into **clean root filesystems** (minimal Debian 13, Ubuntu 24.04 and Ubuntu 26.04 images), as a normal
+  user and with the final version of the installer, then inspected: tool versions, fonts, tmux and zsh reading their
+  config, 18 tree-sitter parsers and 7 LSP servers in Neovim, syntax colours on a PHP file that mixes HTML and
+  JavaScript, and `uninstall`. You can repeat this yourself with `tests/clean-rootfs.sh` (see below).
 - A user who **already has their own config files**: they are backed up, a second install does not back them up
   again, and `uninstall` puts the originals back. The whole flow was also run through the public GitHub URL.
 - `--dry-run` for every component, shellcheck, and a GitHub Actions run on Ubuntu for every push.
@@ -118,13 +119,16 @@ linux/debian/                   Debian/Ubuntu installer: install.sh, uninstall.s
 config/                         zsh, starship, tmux, nvim, ghostty, elinks, caelestia
 bin/                            small scripts (web, firefox-for-browsh)
 docs/                           preview placeholder, how-tos
+tests/clean-rootfs.sh           install into a clean Debian/Ubuntu root filesystem and check it
 ```
 
 ## Adding another OS
 
 Create `linux/<name>/install.sh` and `uninstall.sh` (see `linux/debian/` for the shape) and add the OS to the detection
 in `install.sh`. Use the helpers in `lib/common.sh` so that `--dry-run` and backups keep working. Pull requests are
-welcome; please say in the description which system you actually tested on.
+welcome; please say in the description which system you actually tested on. `tests/clean-rootfs.sh <debian|ubuntu> <codename>`
+builds a minimal system, runs the installer in it as a normal user and checks the result (needs `sudo`, `debootstrap`
+and `systemd-container`).
 
 ## License and credits
 
