@@ -96,7 +96,8 @@ apt_optional() {
   local p cand
   for p in "$@"; do
     cand="$(apt-cache policy "$p" 2>/dev/null | awk '/Candidate:/{print $2}')"
-    if [ -z "$cand" ] || [ "$cand" = "(none)" ]; then warn "not available on this release, skipped: $p"; else apt_need "$p"; fi
+    if [ -z "$cand" ] || [ "$cand" = "(none)" ]; then warn "not available on this release, skipped: $p"
+    else apt_need "$p" || warn "could not install $p (optional, continuing)"; fi
   done
 }
 

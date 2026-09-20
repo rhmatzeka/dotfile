@@ -254,7 +254,11 @@ printf '\n  Installing: %s\n' "${SELECTED[*]}"
 OK=(); FAILED=()
 for c in "${COMPONENTS[@]}"; do
   [[ " ${SELECTED[*]} " == *" $c "* ]] || continue
-  if ( set -e; "comp_$c" ); then OK+=("$c"); else FAILED+=("$c"); fail "component failed: $c"; fi
+  # NOT inside `if (...)`: bash ignores `set -e` in a condition context, which would let a failed apt run
+  # carry on and be reported as success. A plain subshell followed by $? keeps errexit active inside it.
+  ( set -e; "comp_$c" )
+  rc=$?
+  if [ "$rc" -eq 0 ]; then OK+=("$c"); else FAILED+=("$c"); fail "component failed (exit $rc): $c"; fi
 done
 
 printf '\n'
