@@ -16,11 +16,9 @@ bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
 
 ## Preview
 
-<video src="https://github.com/rhmatzeka/dotfile/raw/main/docs/preview.mp4" poster="https://github.com/rhmatzeka/dotfile/raw/main/docs/preview-poster.jpg" controls muted width="100%"></video>
+![Preview: the Hyprland + Caelestia desktop, wallpapers switching from the shell](docs/preview.gif)
 
-[![Preview: the Hyprland + Caelestia desktop](docs/preview-poster.jpg)](docs/preview.mp4)
-
-If the player above does not load, click the picture to open the video.
+[Watch the full-quality video (mp4)](docs/preview.mp4)
 
 ## Install
 
