@@ -346,6 +346,9 @@ comp_apps() {
       xdg-mime default microsoft-open-with.desktop "$m"
     done
     ok "double-clicking Office files now opens them in Microsoft 365"
+    if confirm "Also for PDF files? Every PDF you open is then converted and uploaded to your OneDrive (you can undo it: xdg-mime default <your PDF viewer>.desktop application/pdf)" n; then
+      xdg-mime default microsoft-open-with.desktop application/pdf && ok "double-clicking a PDF now opens it in Word"
+    fi
   fi
 }
 

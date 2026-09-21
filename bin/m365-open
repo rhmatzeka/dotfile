@@ -44,12 +44,15 @@ upload() {
   file="$1"; dest="$2"; size="$(stat -c %s "$file")"; tok="$(token)"
   target="$GRAPH/root:/$(enc "$dest")"
   if [ "$size" -le 4000000 ]; then
-    curl -fsS -X PUT -H "Authorization: Bearer $tok" -H "Content-Type: application/octet-stream" \
-      --data-binary @"$file" "$target:/content?@microsoft.graph.conflictBehavior=replace" >/dev/null || return 1
-    return 0
+    code="$(curl -sS -o /dev/null -w '%{http_code}' -X PUT -H "Authorization: Bearer $tok" -H "Content-Type: application/octet-stream" \
+      --data-binary @"$file" "$target:/content?@microsoft.graph.conflictBehavior=replace")" || return 1
+    case "$code" in 2*) return 0 ;; 423) return 2 ;; *) return 1 ;; esac
   fi
-  up="$(curl -fsS -X POST -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
-        -d '{"item":{"@microsoft.graph.conflictBehavior":"replace"}}' "$target:/createUploadSession" | jq -r '.uploadUrl // empty')"
+  resp="$(curl -sS -w '\n%{http_code}' -X POST -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
+        -d '{"item":{"@microsoft.graph.conflictBehavior":"replace"}}' "$target:/createUploadSession")" || return 1
+  code="$(printf '%s\n' "$resp" | tail -n1)"
+  case "$code" in 2*) ;; 423) return 2 ;; *) return 1 ;; esac
+  up="$(printf '%s\n' "$resp" | sed '$d' | jq -r '.uploadUrl // empty')"
   [ -n "$up" ] || return 1
   chunk=4915200 off=0   # 15 x 320 KiB, as the API requires
   while [ "$off" -lt "$size" ]; do
@@ -92,7 +95,11 @@ for f in "$@"; do
   esac
   name="$(basename "$f")"
   say "uploading $name to OneDrive..."
-  upload "$f" "$DIR/$name" || { say "upload failed: $name"; continue; }
+  if upload "$f" "$DIR/$name"; then :; else
+    rc=$?
+    if [ "$rc" -eq 2 ]; then say "$name is already open in Word on the web; opening that copy (close it there to upload a new version)"
+    else say "upload failed: $name"; continue; fi
+  fi
   # ask Microsoft Graph for the file's web address (a private, signed-in link)
   url="$(curl -fsS -H "Authorization: Bearer $(token)" "$GRAPH/root:/$(enc "$DIR/$name")" | jq -r '.webUrl // empty')" || url=""
   if [ -z "$url" ]; then
