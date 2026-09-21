@@ -29,6 +29,37 @@ login() {
 # encode each path segment for the Graph API
 enc() { printf '%s' "$1" | jq -Rr 'split("/") | map(@uri) | join("/")'; }
 
+GRAPH=https://graph.microsoft.com/v1.0/me/drive
+
+# a fresh access token: any rclone call refreshes an expired one, then we read it from the config (never printed)
+token() {
+  rclone about "$REMOTE:" >/dev/null 2>&1 || true
+  rclone config dump | jq -r --arg r "$REMOTE" '.[$r].token | fromjson | .access_token'
+}
+
+# upload FILE to OneDrive at PATH. Done with the Graph API directly instead of `rclone copyto`: the rclone shipped by
+# Debian/Ubuntu is too old for OneDrive's current upload sessions ("unauthenticated"). Note the upload URL of a session
+# must NOT get the Authorization header.
+upload() {
+  file="$1"; dest="$2"; size="$(stat -c %s "$file")"; tok="$(token)"
+  target="$GRAPH/root:/$(enc "$dest")"
+  if [ "$size" -le 4000000 ]; then
+    curl -fsS -X PUT -H "Authorization: Bearer $tok" -H "Content-Type: application/octet-stream" \
+      --data-binary @"$file" "$target:/content?@microsoft.graph.conflictBehavior=replace" >/dev/null || return 1
+    return 0
+  fi
+  up="$(curl -fsS -X POST -H "Authorization: Bearer $tok" -H "Content-Type: application/json" \
+        -d '{"item":{"@microsoft.graph.conflictBehavior":"replace"}}' "$target:/createUploadSession" | jq -r '.uploadUrl // empty')"
+  [ -n "$up" ] || return 1
+  chunk=4915200 off=0   # 15 x 320 KiB, as the API requires
+  while [ "$off" -lt "$size" ]; do
+    len=$chunk; [ $((off + len)) -gt "$size" ] && len=$((size - off))
+    tail -c "+$((off + 1))" "$file" | head -c "$len" | curl -fsS -X PUT -H "Content-Length: $len" \
+      -H "Content-Range: bytes $off-$((off + len - 1))/$size" --data-binary @- "$up" >/dev/null || return 1
+    off=$((off + len))
+  done
+}
+
 if [ "${1:-}" = "--login" ]; then login; exit 0; fi
 
 if ! logged_in; then
@@ -61,10 +92,9 @@ for f in "$@"; do
   esac
   name="$(basename "$f")"
   say "uploading $name to OneDrive..."
-  rclone copyto "$f" "$REMOTE:$DIR/$name" || { say "upload failed: $name"; continue; }
-  # rclone just refreshed its token; ask Microsoft Graph for the file's web address (a private, signed-in link)
-  token="$(rclone config dump | jq -r --arg r "$REMOTE" '.[$r].token | fromjson | .access_token')"
-  url="$(curl -fsS -H "Authorization: Bearer $token" "https://graph.microsoft.com/v1.0/me/drive/root:/$(enc "$DIR/$name")" | jq -r '.webUrl // empty')" || url=""
+  upload "$f" "$DIR/$name" || { say "upload failed: $name"; continue; }
+  # ask Microsoft Graph for the file's web address (a private, signed-in link)
+  url="$(curl -fsS -H "Authorization: Bearer $(token)" "$GRAPH/root:/$(enc "$DIR/$name")" | jq -r '.webUrl // empty')" || url=""
   if [ -z "$url" ]; then
     say "uploaded, but could not get its address; opening your OneDrive instead"
     url="https://onedrive.live.com/"

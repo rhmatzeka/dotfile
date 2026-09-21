@@ -1,0 +1,41 @@
+diff --git a/services/NotifData.qml b/services/NotifData.qml
+index 2bfcec3d..d45c767c 100644
+--- a/services/NotifData.qml
++++ b/services/NotifData.qml
+@@ -43,6 +43,18 @@ QtObject {
+     property string notificationId
+     property string summary
+     property string body
++
++    // Some apps (Chrome web pushes such as Instagram, others) put HTML in the body, e.g. <a href="...">name</a>.
++    // Keep the text, drop the link and other tags, turn <b>/<i> into bold/italic, decode the common entities.
++    function cleanBody(text: string): string {
++        let s = String(text ?? "");
++        if (!/<\/?[a-zA-Z]/.test(s) && !/&(amp|lt|gt|quot|apos|#\d+);/.test(s))
++            return s;
++        s = s.replace(/<a\s[^>]*>([\s\S]*?)<\/a>/gi, "$1");
++        s = s.replace(/<\/?(b|strong)\b[^>]*>/gi, "**").replace(/<\/?(i|em)\b[^>]*>/gi, "*");
++        s = s.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
++        return s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, "&").trim();
++    }
+     property string appIcon
+     property string appName
+     property string image
+@@ -133,7 +145,7 @@ QtObject {
+         }
+ 
+         function onBodyChanged(): void {
+-            notif.body = notif.notification.body;
++            notif.body = notif.cleanBody(notif.notification.body);
+         }
+ 
+         function onAppIconChanged(): void {
+@@ -232,7 +244,7 @@ QtObject {
+ 
+         notificationId = notification.id;
+         summary = notification.summary;
+-        body = notification.body;
++        body = cleanBody(notification.body);
+         appIcon = notification.appIcon;
+         appName = notification.appName;
+         image = notification.image;
