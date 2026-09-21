@@ -96,8 +96,8 @@ echo "== installer exit code: $RC"
 
 echo "== checks"
 nspawn --user=tester --chdir=/home/tester --setenv=HOME=/home/tester --setenv=TERM=xterm-256color --pipe /bin/bash -c '
-export PATH=$HOME/.local/bin:$PATH
-for c in zsh tmux nvim tree-sitter starship elinks; do v="--version"; [ "$c" = tmux ] && v="-V"; command -v "$c" >/dev/null && printf "  %-12s %s\n" "$c" "$("$c" $v 2>&1 | head -1 | cut -c1-48)"; done
+export PATH=$HOME/.local/bin:$HOME/.cargo/bin:$PATH
+for c in zsh tmux nvim tree-sitter starship elinks php composer mariadb rustc cargo rust-analyzer; do v="--version"; [ "$c" = tmux ] && v="-V"; command -v "$c" >/dev/null && printf "  %-12s %s\n" "$c" "$("$c" $v 2>&1 | head -1 | cut -c1-48)"; done
 printf "  nerd font entries: %s\n" "$(fc-list | grep -ci "JetBrainsMono Nerd")"
 printf "  nvim parsers: %s, mason packages: %s\n" "$(ls ~/.local/share/nvim/site/parser 2>/dev/null | wc -l)" "$(ls ~/.local/share/nvim/mason/packages 2>/dev/null | wc -l)"
 ' 2>&1 | grep -v 'unable to resolve host'

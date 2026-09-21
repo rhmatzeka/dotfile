@@ -237,6 +237,15 @@ install_dots() { # the upstream Hyprland config, cloned here (it is not redistri
     mkdir -p "$HOME/.config/hypr" && cp -r "$up/hypr/." "$HOME/.config/hypr/" && : >"$HOME/.config/hypr/.rhmatzeka-dotfiles"
     ok "installed the Caelestia Hyprland config"
   else ok "Caelestia Hyprland config already in place"; fi
+  # the other application configs of the Caelestia dotfiles (terminal, monitor, file manager...). Copied only when you
+  # do not have one already: an existing config of yours is never touched.
+  local d
+  for d in btop fastfetch fish foot micro uwsm thunar zed; do
+    [ -d "$up/$d" ] || continue
+    if [ -e "$HOME/.config/$d" ]; then ok "kept your existing ~/.config/$d"
+    elif [ "$DRY_RUN" = 1 ]; then info "[dry-run] would copy Caelestia's $d config to ~/.config/$d"
+    else mkdir -p "$HOME/.config" && cp -r "$up/$d" "$HOME/.config/$d" && ok "installed ~/.config/$d"; fi
+  done
   for f in hypr-user.lua hypr-vars.lua shell.json; do backup_and_link "$C/caelestia/$f" "$HOME/.config/caelestia/$f"; done
 }
 

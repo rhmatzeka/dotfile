@@ -5,13 +5,14 @@
 #   bash <(curl -fsSL https://dotfiles.rahmateka.my.id) --dry-run --all
 #
 # `bash <(...)` instead of `curl | bash` keeps the terminal attached, so the menu and sudo prompts work.
-# This file only detects the distribution family, fetches the repository to ~/.dotfiles and hands over to the
+# This file only detects the distribution family, fetches the repository to ~/.local/share/rhmatzeka-dotfile and hands over to the
 # installer for that platform. Everything it will do is printed first; --dry-run changes nothing.
 set -euo pipefail
 
 REPO_URL="${DOTFILES_REPO:-https://github.com/rhmatzeka/dotfile.git}"
 BRANCH="${DOTFILES_BRANCH:-main}"
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+# Not ~/.dotfiles: many people keep their own dotfiles repository there and we must never pull into it.
+DOTFILES_DIR="${DOTFILES_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/rhmatzeka-dotfile}"
 
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   CY=$'\033[38;2;0;217;255m'; GR=$'\033[38;2;80;250;123m'; RD=$'\033[38;2;255;85;85m'; DM=$'\033[2m'; BD=$'\033[1m'; OFF=$'\033[0m'
@@ -54,7 +55,7 @@ esac
 good "Detected: Linux / $FAMILY family"
 
 # --- where does the repository live? ------------------------------------------
-# Run from a checkout (bash ./install.sh)? Use it as is. Run through curl? Fetch it to ~/.dotfiles.
+# Run from a checkout (bash ./install.sh)? Use it as is. Run through curl? Fetch it to ~/.local/share/rhmatzeka-dotfile.
 SELF="${BASH_SOURCE[0]:-}"
 if [ -n "$SELF" ] && [ -f "$SELF" ] && [ -f "$(dirname "$SELF")/linux/install.sh" ] && [ -z "${DOTFILES_FORCE_CLONE:-}" ]; then
   DOTFILES_DIR="$(cd "$(dirname "$SELF")" && pwd)"
@@ -71,6 +72,12 @@ else
     esac
   fi
   if [ -d "$DOTFILES_DIR/.git" ]; then
+    origin="$(git -C "$DOTFILES_DIR" remote get-url origin 2>/dev/null || true)"
+    case "${origin%.git}" in
+      "${REPO_URL%.git}") ;;
+      *) bad "$DOTFILES_DIR is a git repository of something else (origin: ${origin:-none}); not touching it."
+         say "Set DOTFILES_DIR to another directory and run again."; exit 1 ;;
+    esac
     say "Updating $DOTFILES_DIR"
     if [ -n "$(git -C "$DOTFILES_DIR" status --porcelain 2>/dev/null)" ]; then
       say "Local changes found in $DOTFILES_DIR: leaving them untouched and not updating."

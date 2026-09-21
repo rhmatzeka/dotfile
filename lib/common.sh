@@ -7,7 +7,7 @@
 #   Every symlink we create is recorded in a manifest so uninstall can undo exactly that, and any file
 #   we would replace is moved to ~/.dotfiles-backup/<timestamp>/ first.
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+DOTFILES_DIR="${DOTFILES_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/rhmatzeka-dotfile}"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/rhmatzeka-dotfiles"
 MANIFEST="$STATE_DIR/links.tsv"
 BACKUP_ROOT="${DOTFILES_BACKUP_DIR:-$HOME/.dotfiles-backup}"

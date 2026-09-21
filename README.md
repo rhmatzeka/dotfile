@@ -53,7 +53,9 @@ ever fails, the same script is at
 | `terminal` | Ghostty config: dark theme, Vim-style keys |
 | `browsers` | Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m |
 | `apps` | Microsoft 365 web apps (Word, Excel, PowerPoint, Outlook, OneDrive) in their own windows, PDF viewer, VLC, GIMP. Pre-selected only when a graphical session is running |
-| `desktop` | Hyprland + Caelestia shell. **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
+| `web` | Web development: PHP, Composer, MariaDB, Apache, phpMyAdmin. Services are **not** started unless you say yes (Apache listens on port 80); no passwords are set |
+| `rust` | Rust through the official rustup installer: stable toolchain, clippy, rustfmt, rust-analyzer |
+| `desktop` | Hyprland + Caelestia shell, plus Caelestia's btop, fastfetch, foot, micro, thunar, zed and fish configs (only where you have none). **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
 
 The default selection is everything except `desktop`.
 
@@ -63,9 +65,9 @@ The default selection is everything except `desktop`.
 |---|---|
 | Debian 13 (trixie) | All components except `desktop` installed and checked **from scratch in a clean Debian 13**. `desktop`: the package lists are validated; the source build has not been re-run through this script yet (beta) |
 | Ubuntu 24.04 LTS, 26.04 LTS | Same components installed and checked from scratch in a clean Ubuntu (earlier revision of the installer). `starship` is not in the 24.04 repositories, so its official installer is used; Browsh is skipped (no `firefox-esr` package) while elinks and w3m are installed |
-| Arch Linux (and Manjaro, EndeavourOS, ... via `ID_LIKE=arch`) | Installed and checked from scratch in the official Arch bootstrap image. Only Arch itself was tested |
-| Fedora 44 (and RHEL-likes via `ID_LIKE`) | Installed and checked from scratch in the official Fedora container image. `starship` is not in the Fedora repositories: its official installer is used. Only Fedora itself was tested |
-| openSUSE Tumbleweed | Installed and checked from scratch in the official Tumbleweed image. Leap and SLE were not tested |
+| Arch Linux (and Manjaro, EndeavourOS, ... via `ID_LIKE=arch`) | Installed and checked from scratch in the official Arch bootstrap image. Only Arch itself was tested. `web` and `rust`: package names checked against the repositories, full run **not completed yet** |
+| Fedora 44 (and RHEL-likes via `ID_LIKE`) | Installed and checked from scratch in the official Fedora container image. `starship` is not in the Fedora repositories: its official installer is used. Only Fedora itself was tested. `web` and `rust`: package names checked, full run **not completed yet** |
+| openSUSE Tumbleweed | Installed and checked from scratch in the official Tumbleweed image. Leap and SLE were not tested. `web` and `rust`: package names checked, full run **not completed yet** |
 | Alpine, NixOS, Void, Gentoo, macOS | **Not supported.** Contributions are welcome (see below) |
 
 `desktop` (Hyprland + Caelestia) is **Debian 13 only** because it depends on `trixie-backports` and on pinned build
@@ -90,7 +92,7 @@ installed from the repositories when available.
 - `--dry-run` for every component, shellcheck, and a GitHub Actions run on Ubuntu for every push.
 - Failures are not swallowed: a failed package step fails its component and the installer exits non-zero.
 
-**Not tested:** the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
+**Not tested:** `web` and `rust` end to end on Arch, Fedora and openSUSE (they were on Debian 13), the extra Caelestia application configs installed by `desktop`, the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
 (the launchers and the installer were tested, not a login), Ghostty itself, any distribution or release not listed
 above, and ARM machines.
 
@@ -126,9 +128,9 @@ are left in place; the list is printed at the end.
 
 ## How it works
 
-The top-level `install.sh` detects the OS, fetches this repository to `~/.dotfiles`, and hands over to the installer for
+The top-level `install.sh` detects the OS, fetches this repository to `~/.local/share/rhmatzeka-dotfile`, and hands over to the installer for
 that platform (`linux/install.sh`, which uses `lib/pkg.sh` to talk to apt, pacman, dnf or zypper). Configs live in `config/` and are installed as symlinks, so editing them
-in `~/.dotfiles` takes effect immediately. Shared helpers (backup, symlinks, dry run) are in `lib/common.sh`.
+in that directory takes effect immediately. Shared helpers (backup, symlinks, dry run) are in `lib/common.sh`.
 
 ```
 install.sh  uninstall.sh        entry points (OS detection)

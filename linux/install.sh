@@ -22,7 +22,7 @@ pkg_detect || { fail "This Linux distribution is not supported yet (Debian/Ubunt
 C="$DOTFILES_DIR/config"
 ARCH="$(uname -m)"
 
-COMPONENTS=(base shell tmux nvim terminal browsers apps)
+COMPONENTS=(base shell tmux nvim terminal browsers apps web rust)
 [ "$PKG_FAMILY" = debian ] && COMPONENTS+=(desktop)
 declare -A DESC=(
   [base]="Base packages and the JetBrainsMono Nerd Font"
@@ -32,6 +32,8 @@ declare -A DESC=(
   [terminal]="Ghostty config (Vim-style keys, dark theme)"
   [browsers]="Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m"
   [apps]="Microsoft Word/Excel/PowerPoint/Outlook/OneDrive (365 web apps in their own window), PDF viewer, VLC, GIMP"
+  [web]="Web development: PHP, Composer, MariaDB, Apache, phpMyAdmin (services stay off unless you say yes)"
+  [rust]="Rust toolchain via rustup (rustc, cargo, clippy, rustfmt, rust-analyzer)"
   [desktop]="Hyprland + Caelestia shell (Debian 13 only; builds Qt 6.11 from source, 1-2 hours)"
 )
 DEFAULTS=(base shell tmux nvim terminal)
@@ -131,6 +133,30 @@ nerd_font() { # nerd_font Name   e.g. JetBrainsMono  (the .tar.xz is ~7 MB, the 
   mkdir -p "$dir" && tar -xJf "$tmp" -C "$dir" && rm -f "$tmp"
   fc-cache -f >/dev/null 2>&1
   ok "installed $name Nerd Font"
+}
+
+# Distribution quirks and services for the web stack.
+web_post_install() {
+  [ "$DRY_RUN" = 1 ] && { info "[dry-run] would finish the PHP/MariaDB/Apache setup"; return 0; }
+  need_sudo
+  case "$PKG_FAMILY" in
+    arch) # the Arch php package ships its modules disabled, and MariaDB needs its data directory created once
+      if [ -f /etc/php/php.ini ]; then
+        local e; for e in mysqli pdo_mysql gd intl zip iconv; do
+          "${SUDO[@]}" sed -i "s/^;extension=$e\$/extension=$e/" /etc/php/php.ini
+        done
+      fi
+      [ -d /var/lib/mysql/mysql ] || "${SUDO[@]}" mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql >/dev/null 2>&1 \
+        || warn "could not initialise the MariaDB data directory"
+      ;;
+  esac
+  local mysvc=mariadb websvc=apache2
+  case "$PKG_FAMILY" in arch|fedora) websvc=httpd ;; esac
+  if have systemctl && [ -d /run/systemd/system ] && confirm "Start MariaDB and Apache now and at every boot? (Apache listens on port 80)" n; then
+    "${SUDO[@]}" systemctl enable --now "$mysvc" "$websvc" || warn "could not start the services; start them by hand"
+  else
+    info "Services were not started. Start them with: sudo systemctl enable --now $mysvc $websvc"
+  fi
 }
 
 # ----------------------------------------------------------- components ----
@@ -263,6 +289,38 @@ comp_apps() {
   [ "$DRY_RUN" = 1 ] || { have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null; true; }
   pkg_optional evince vlc gimp
   info "Word, Excel, PowerPoint, Outlook and OneDrive are now in your app menu (sign in with your Microsoft account)."
+}
+
+comp_web() {
+  step "Web development: PHP, Composer, MariaDB, Apache, phpMyAdmin"
+  if [ "$PKG_FAMILY" = debian ] && [ "$DRY_RUN" != 1 ]; then   # phpMyAdmin would otherwise ask questions and try to create a database
+    need_sudo
+    printf '%s\n' "phpmyadmin phpmyadmin/dbconfig-install boolean false" "phpmyadmin phpmyadmin/reconfigure-webserver multiselect apache2" \
+      | "${SUDO[@]}" debconf-set-selections
+  fi
+  pkg_need php composer mariadb apache
+  pkg_optional phpmyadmin
+  web_post_install
+  info "MariaDB uses your Linux user via the unix socket (sudo mysql). No password was set anywhere."
+}
+
+comp_rust() {
+  step "Rust (rustup)"
+  pkg_need curl ca-certificates buildtools
+  if have rustup || [ -x "$HOME/.cargo/bin/rustup" ]; then
+    ok "rustup already installed"
+  elif [ "$DRY_RUN" = 1 ]; then info "[dry-run] would run the official rustup installer (rustup.rs)"
+  else
+    info "running the official rustup installer (stable toolchain, no changes to your shell files)"
+    curl -fsSL --proto '=https' --tlsv1.2 https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile default \
+      || { fail "rustup installer failed"; return 1; }
+  fi
+  if [ "$DRY_RUN" != 1 ]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+    rustup component add rust-analyzer clippy rustfmt >/dev/null 2>&1 || warn "could not add rust-analyzer/clippy/rustfmt"
+    ok "$(rustc --version 2>/dev/null)"
+  fi
+  info "\$HOME/.cargo/bin must be on your PATH (the zsh config from this repo does that)."
 }
 
 comp_desktop() {
