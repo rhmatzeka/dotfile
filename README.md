@@ -90,6 +90,36 @@ ever fails, the same script is at
 
 The default selection is everything except `desktop`.
 
+## Memory usage
+
+How much RAM does this setup take? Measured once, on the author's laptop: Debian 13, AMD Ryzen 3 7320U, **7 GB RAM**,
+Hyprland 0.55.2, on 2026-09-21. The numbers are **PSS** (read from `/proc/<pid>/smaps_rollup`: memory shared between
+processes is divided between them, so nothing is counted twice, unlike the RSS column of `top`). They are approximate,
+were taken while the machine was in normal use, and will differ on your hardware.
+
+| Part | RAM | Notes |
+|---|---|---|
+| Hyprland (compositor) | ~100 MB | RSS; PSS could not be read for this process |
+| Caelestia shell (bar, launcher, sidebar, notifications) | ~330 MB | `qs` ~303 MB plus six small helpers: the largest single part of the desktop |
+| Ghostty | ~100 MB | one process shared by all windows (measured with a few windows open) |
+| Audio, portals, Xwayland, polkit | ~60 MB | not from this repository, but the desktop needs them |
+| zsh + Oh My Zsh + starship | ~3 MB | per interactive shell |
+| tmux | ~9 MB | the server with one session |
+| Neovim (NvChad) | ~136 MB | one shell file open with a language server (Node.js) attached; more plugins and servers mean more |
+| Firefox for Browsh | ~560 MB | one blank page. Browsh is the heaviest of the terminal browsers; elinks and w3m need only a few MB |
+
+**The whole desktop (Hyprland + Caelestia + terminal + system services) idles at roughly 0.6 GB** before you open anything
+else. In practice your applications dominate: at the time of measuring, a browser with many tabs used about 2.3 GB and a
+chat app about 0.6 GB, far more than everything in this repository together.
+
+If RAM is tight:
+
+- **Skip `desktop`.** The terminal parts alone (`--only base,shell,tmux,nvim,terminal`) cost tens of megabytes plus Neovim.
+- **Skip Browsh** (it needs Firefox) and use elinks or w3m.
+- The Microsoft 365 web apps run in a Chrome window, so each open window costs as much as a browser window (hundreds of MB): close them when you are done.
+- MariaDB and Apache (`web`) are not started unless you say so. MariaDB's memory use varied too much here (12 to 160 MB) to give a single figure.
+
+
 ## Supported systems
 
 | System | Status |
