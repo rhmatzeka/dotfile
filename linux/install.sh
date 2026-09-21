@@ -135,6 +135,14 @@ nerd_font() { # nerd_font Name   e.g. JetBrainsMono  (the .tar.xz is ~7 MB, the 
   ok "installed $name Nerd Font"
 }
 
+# The folder downloads should go to: the XDG one (it can be localised, e.g. "Unduhan"), else ~/Downloads.
+downloads_dir() {
+  local d=""
+  have xdg-user-dir && d="$(xdg-user-dir DOWNLOAD 2>/dev/null)"
+  case "$d" in ""|"$HOME"|"$HOME/") d="$HOME/Downloads" ;; esac
+  printf '%s' "$d"
+}
+
 # Distribution quirks and services for the web stack.
 web_post_install() {
   [ "$DRY_RUN" = 1 ] && { info "[dry-run] would finish the PHP/MariaDB/Apache setup"; return 0; }
@@ -163,7 +171,12 @@ web_post_install() {
 comp_base() {
   step "Base packages"
   pkg_need git curl wget unzip xz ca-certificates buildtools fontconfig jq fzf ripgrep htop
-  pkg_optional eza zoxide trash-cli fastfetch btop
+  pkg_optional eza zoxide trash-cli fastfetch btop xdg-user-dirs
+  if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would make sure the Downloads folder exists"
+  else
+    have xdg-user-dirs-update && xdg-user-dirs-update 2>/dev/null
+    mkdir -p "$(downloads_dir)" && ok "downloads folder: $(downloads_dir | sed "s|^$HOME|~|")"
+  fi
   nerd_font JetBrainsMono
 }
 
@@ -262,6 +275,12 @@ comp_terminal() {
 comp_browsers() {
   step "Terminal browsers"
   pkg_need elinks w3m
+  # elinks saves into the current directory by default; point it at the Downloads folder (absolute path, this file is per machine)
+  if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would write ~/.config/elinks/local.conf (download folder)"
+  else
+    mkdir -p "$HOME/.config/elinks" "$(downloads_dir)"
+    printf '## written by rhmatzeka/dotfile: where elinks saves downloads\nset document.download.directory = "%s/"\n' "$(downloads_dir)" >"$HOME/.config/elinks/local.conf"
+  fi
   backup_and_link "$C/elinks/elinks.conf" "$HOME/.config/elinks/elinks.conf"
   pkg_optional firefox
   if ! pkg_have firefox; then warn "Firefox is unavailable here, so Browsh is skipped (elinks and w3m still work)."; return 0; fi

@@ -46,12 +46,12 @@ ever fails, the same script is at
 
 | Component | Contents |
 |---|---|
-| `base` | Base packages (git, fzf, ripgrep, eza, zoxide, ...) and the JetBrainsMono Nerd Font |
+| `base` | Base packages (git, fzf, ripgrep, eza, zoxide, ...), the JetBrainsMono Nerd Font, and makes sure your Downloads folder exists |
 | `shell` | zsh, Oh My Zsh (autosuggestions, syntax highlighting) and the starship prompt |
 | `tmux` | tmux with a cyan / Dracula theme |
 | `nvim` | Neovim + NvChad, tree-sitter parsers (html, css, js, php, ...) and LSP servers through Mason |
 | `terminal` | Ghostty config: dark theme, Vim-style keys |
-| `browsers` | Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m |
+| `browsers` | Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m. Files you download in elinks and Browsh are saved to your Downloads folder instead of the current directory |
 | `apps` | Microsoft 365 web apps (Word, Excel, PowerPoint, Outlook, OneDrive) in their own windows, PDF viewer, VLC, GIMP. Pre-selected only when a graphical session is running |
 | `web` | Web development: PHP, Composer, MariaDB, Apache, phpMyAdmin. Services are **not** started unless you say yes (Apache listens on port 80); no passwords are set |
 | `rust` | Rust through the official rustup installer: stable toolchain, clippy, rustfmt, rust-analyzer |

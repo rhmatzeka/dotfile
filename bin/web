@@ -7,6 +7,10 @@ PROFILE="$HOME/.config/browsh/firefox_profile"
 if ! pgrep -x browsh >/dev/null && pgrep -f -- "--profile $PROFILE" >/dev/null; then
   pkill -f -- "--profile $PROFILE"; sleep 2
 fi
+# downloads go to the system Downloads folder (Firefox: folderList 1 = the XDG download directory)
+mkdir -p "$PROFILE"
+grep -qs 'browser.download.folderList' "$PROFILE/user.js" || printf '%s\n' \
+  'user_pref("browser.download.folderList", 1);' 'user_pref("browser.download.useDownloadDir", true);' >>"$PROFILE/user.js"
 "$HOME/.local/bin/browsh" --firefox.path "$HOME/.local/opt/browsh/firefox-for-browsh" --startup-url "${1:-https://duckduckgo.com}"
 rc=$?
 # make sure nothing is left running after quitting or crashing
