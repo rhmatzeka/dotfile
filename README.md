@@ -92,7 +92,7 @@ installed from the repositories when available.
 - `--dry-run` for every component, shellcheck, and a GitHub Actions run on Ubuntu for every push.
 - Failures are not swallowed: a failed package step fails its component and the installer exits non-zero.
 
-**Not tested:** "Open with Microsoft 365" against a real Microsoft account (the upload/open flow was tested with a stand-in for rclone and the Graph API), `web` and `rust` end to end on Arch, Fedora and openSUSE (they were on Debian 13), the extra Caelestia application configs installed by `desktop`, the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
+**Not tested:** "Open with Microsoft 365" with a work or school (Microsoft 365 Business) account (it was tested end to end with one personal account: PDF converted, uploaded and opened), `web` and `rust` end to end on Arch, Fedora and openSUSE (they were on Debian 13), the extra Caelestia application configs installed by `desktop`, the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
 (the launchers and the installer were tested, not a login), Ghostty itself, any distribution or release not listed
 above, and ARM machines.
 
