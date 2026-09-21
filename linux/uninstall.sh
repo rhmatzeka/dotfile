@@ -53,6 +53,7 @@ cat <<MSG
    ~/.oh-my-zsh            Oh My Zsh and its plugins
    ~/.config/nvim          the NvChad starter (only if it has a .rhmatzeka-dotfiles marker), ~/.local/share/nvim
    ~/.config/elinks/local.conf (download folder setting)
+   ~/.config/Thunar/uca.xml    the "Open with Microsoft 365" action (delete that <action> block; your original is in ~/.dotfiles-backup)
    ~/.local/opt/browsh     Browsh, ~/.local/opt/nvim, ~/.local/bin/{tree-sitter,starship,browsh,nvim}
    ~/.config/hypr          the Caelestia Hyprland config (only if it has a .rhmatzeka-dotfiles marker)
    /opt/qt-6.11.2, /opt/dart-sass, /usr/local/bin/{qs,sass,caelestia}   the desktop build (sudo rm -rf)

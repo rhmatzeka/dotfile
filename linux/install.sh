@@ -143,6 +143,23 @@ downloads_dir() {
   printf '%s' "$d"
 }
 
+# Thunar: put "Open with Microsoft 365" in the right-click menu of PDF and Office files (custom action, one entry in uca.xml)
+add_thunar_action() {
+  local uca="$HOME/.config/Thunar/uca.xml" snip="$C/thunar/m365-action.xml"
+  have thunar || return 0
+  [ -f "$snip" ] || return 0
+  if [ -f "$uca" ] && grep -q 'm365-open' "$uca"; then ok "Thunar right-click entry already present"; return 0; fi
+  if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would add the Thunar right-click entry"; return 0; fi
+  mkdir -p "$HOME/.config/Thunar"
+  if [ -f "$uca" ]; then
+    mkdir -p "$BACKUP_ROOT/$STAMP/.config/Thunar" && cp -p "$uca" "$BACKUP_ROOT/$STAMP/.config/Thunar/uca.xml"
+    awk -v snip="$snip" '/<\/actions>/ { while ((getline line < snip) > 0) print line } { print }' "$uca" >"$uca.new" && mv "$uca.new" "$uca"
+  else
+    { printf '<?xml version="1.0" encoding="UTF-8"?>\n<actions>\n'; cat "$snip"; printf '</actions>\n'; } >"$uca"
+  fi
+  ok "Thunar: right-click > Open with Microsoft 365 (restart Thunar to see it)"
+}
+
 # Distribution quirks and services for the web stack.
 web_post_install() {
   [ "$DRY_RUN" = 1 ] && { info "[dry-run] would finish the PHP/MariaDB/Apache setup"; return 0; }
@@ -317,6 +334,7 @@ comp_apps() {
   done
   [ "$DRY_RUN" = 1 ] || { have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null; true; }
   pkg_optional evince vlc gimp
+  add_thunar_action
   info "Word, Excel, PowerPoint, Outlook and OneDrive are now in your app menu (sign in with your Microsoft account)."
   info "Local files: right-click a .docx/.xlsx/.pptx > Open with Microsoft 365 (uploads it to your OneDrive). First run: m365-open --login"
   if [ "$DRY_RUN" != 1 ] && have xdg-mime \

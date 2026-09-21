@@ -1,0 +1,11 @@
+<action>
+	<icon>applications-office</icon>
+	<name>Open with Microsoft 365</name>
+	<submenu></submenu>
+	<unique-id>1758470000000000-m365</unique-id>
+	<command>sh -c 'exec "$HOME/.local/bin/m365-open" "$@"' sh %F</command>
+	<description>Upload to your OneDrive and open in Word, Excel or PowerPoint on the web (PDFs are converted to Word first)</description>
+	<range>*</range>
+	<patterns>*.pdf;*.PDF;*.docx;*.doc;*.xlsx;*.xls;*.pptx;*.ppt</patterns>
+	<other-files/>
+</action>
