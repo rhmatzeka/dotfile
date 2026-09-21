@@ -25,14 +25,12 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 8, bezier = "standar
 hl.bind("SUPER + O", hl.dsp.layout("togglesplit"))
 hl.bind("SUPER + SHIFT + O", hl.dsp.layout("swapsplit"))
 
--- Vim-style window navigation: Super+J/K/L focus (down/up/right), Super+Shift+H/J/K/L move the window.
--- Super+H HIDES the focused window: it is sent quietly to workspace 10 (not the scratchpad, which overlays every workspace
--- and stops workspace swiping). Bring it back: Super+0, then Super+Alt+1..9 to move it to a workspace.
--- Focus left: Super+Left arrow.
-for key, dir in pairs({ J = "down", K = "up", L = "right" }) do
-    hl.bind("SUPER + " .. key, hl.dsp.focus({ direction = dir }))
-end
+-- Vim-style window navigation: Super+H/J/K/L focus, Super+Shift+H/J/K/L move the window
 for key, dir in pairs({ H = "left", J = "down", K = "up", L = "right" }) do
+    hl.bind("SUPER + " .. key, hl.dsp.focus({ direction = dir }))
     hl.bind("SUPER + SHIFT + " .. key, hl.dsp.window.move({ direction = dir }))
 end
-hl.bind("SUPER + H", hl.dsp.window.move({ workspace = "10", follow = false }))
+
+-- Super+A HIDES the focused window ("Away"): it is sent quietly to workspace 10 (not the scratchpad, which overlays every
+-- workspace and stops workspace swiping). Bring it back: Super+0, then Super+Alt+1..9 to move it to a workspace.
+hl.bind("SUPER + A", hl.dsp.window.move({ workspace = "10", follow = false }))
