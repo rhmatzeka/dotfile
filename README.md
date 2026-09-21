@@ -19,9 +19,40 @@ bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
 
 ## Preview
 
-![Preview: the Hyprland + Caelestia desktop, wallpapers switching from the shell](docs/preview.gif)
+<table>
+  <tr>
+    <th align="center" width="50%">Terminal (Neofetch)</th>
+    <th align="center" width="50%">Editor (Neovim)</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/terminal.jpg" alt="Ghostty with neofetch, eza, git log and the starship prompt"></td>
+    <td><img src="docs/screenshots/editor.jpg" alt="Neovim with NvChad, syntax highlighting and the file tree"></td>
+  </tr>
+  <tr>
+    <th align="center">File manager (Yazi)</th>
+    <th align="center">Launcher (Caelestia)</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/files.jpg" alt="Yazi file manager in the terminal"></td>
+    <td><img src="docs/screenshots/launcher.jpg" alt="The Caelestia app launcher on Hyprland"></td>
+  </tr>
+</table>
+
+**Desktop demo:**
+
+![The Hyprland + Caelestia desktop, wallpapers switching from the shell](docs/preview.gif)
 
 [Watch the full-quality video (mp4)](docs/preview.mp4)
+
+<!--
+  Want a real video player here, like GitHub's own uploads?
+  On github.com open this file, click the pencil (Edit), drag your .mp4 into the editor and GitHub inserts a link like
+  https://github.com/user-attachments/assets/<id>. Put that link on a line of its own, above the GIF, and commit.
+  (It cannot be done with `git push`: GitHub only makes the player for files uploaded through the browser.)
+-->
+
+Theme: a Dracula palette with a cyan accent across Ghostty, Neovim (NvChad), tmux, starship and Yazi, on Hyprland with the
+Caelestia shell.
 
 ## Install
 
