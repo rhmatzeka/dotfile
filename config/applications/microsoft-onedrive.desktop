@@ -2,7 +2,7 @@
 Type=Application
 Name=Microsoft OneDrive (web)
 Comment=Microsoft OneDrive in its own window (Microsoft 365 web app; sign in with your Microsoft account)
-Exec=m365 onedrive
+Exec=sh -c "exec ~/.local/bin/m365 onedrive"
 Icon=folder-remote
 Terminal=false
 Categories=Office;

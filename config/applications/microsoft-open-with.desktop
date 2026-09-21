@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Open with Microsoft 365
+Comment=Upload the file to your OneDrive and open it in Word, Excel or PowerPoint (web)
+Exec=sh -c "exec ~/.local/bin/m365-open \\"\\$@\\"" sh %F
+Icon=applications-office
+Terminal=false
+NoDisplay=false
+Categories=Office;
+MimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/msword;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.ms-excel;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.ms-powerpoint;

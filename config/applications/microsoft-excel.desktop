@@ -2,7 +2,7 @@
 Type=Application
 Name=Microsoft Excel (web)
 Comment=Microsoft Excel in its own window (Microsoft 365 web app; sign in with your Microsoft account)
-Exec=m365 excel
+Exec=sh -c "exec ~/.local/bin/m365 excel"
 Icon=x-office-spreadsheet
 Terminal=false
 Categories=Office;Spreadsheet;

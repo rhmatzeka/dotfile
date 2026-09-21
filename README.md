@@ -52,7 +52,7 @@ ever fails, the same script is at
 | `nvim` | Neovim + NvChad, tree-sitter parsers (html, css, js, php, ...) and LSP servers through Mason |
 | `terminal` | Ghostty config: dark theme, Vim-style keys |
 | `browsers` | Terminal browsers: Browsh (Firefox in the terminal), elinks, w3m. Files you download in elinks and Browsh are saved to your Downloads folder instead of the current directory |
-| `apps` | Microsoft 365 web apps (Word, Excel, PowerPoint, Outlook, OneDrive) in their own windows, PDF viewer, VLC, GIMP. Pre-selected only when a graphical session is running |
+| `apps` | Microsoft 365 web apps (Word, Excel, PowerPoint, Outlook, OneDrive) in their own windows, plus **Open with Microsoft 365** for local files (uploads to a private folder of your OneDrive with rclone, then opens it in Word/Excel/PowerPoint on the web), PDF viewer, VLC, GIMP. Pre-selected only when a graphical session is running |
 | `web` | Web development: PHP, Composer, MariaDB, Apache, phpMyAdmin. Services are **not** started unless you say yes (Apache listens on port 80); no passwords are set |
 | `rust` | Rust through the official rustup installer: stable toolchain, clippy, rustfmt, rust-analyzer |
 | `desktop` | Hyprland + Caelestia shell, plus Caelestia's btop, fastfetch, foot, micro, thunar, zed and fish configs (only where you have none). **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
@@ -92,7 +92,7 @@ installed from the repositories when available.
 - `--dry-run` for every component, shellcheck, and a GitHub Actions run on Ubuntu for every push.
 - Failures are not swallowed: a failed package step fails its component and the installer exits non-zero.
 
-**Not tested:** `web` and `rust` end to end on Arch, Fedora and openSUSE (they were on Debian 13), the extra Caelestia application configs installed by `desktop`, the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
+**Not tested:** "Open with Microsoft 365" against a real Microsoft account (the upload/open flow was tested with a stand-in for rclone and the Graph API), `web` and `rust` end to end on Arch, Fedora and openSUSE (they were on Debian 13), the extra Caelestia application configs installed by `desktop`, the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
 (the launchers and the installer were tested, not a login), Ghostty itself, any distribution or release not listed
 above, and ARM machines.
 

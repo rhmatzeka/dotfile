@@ -301,6 +301,8 @@ comp_apps() {
   for b in google-chrome-stable google-chrome chromium chromium-browser brave-browser microsoft-edge; do have "$b" && break; b=""; done
   if [ -z "$b" ]; then info "no Chromium-based browser found: installing Chromium for the app windows"; pkg_need chromium || return 1; fi
   backup_and_link "$DOTFILES_DIR/bin/m365" "$HOME/.local/bin/m365"
+  backup_and_link "$DOTFILES_DIR/bin/m365-open" "$HOME/.local/bin/m365-open"
+  pkg_optional rclone jq
   local f
   for f in "$C"/applications/*.desktop; do
     backup_and_link "$f" "$HOME/.local/share/applications/$(basename "$f")"
@@ -308,6 +310,17 @@ comp_apps() {
   [ "$DRY_RUN" = 1 ] || { have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null; true; }
   pkg_optional evince vlc gimp
   info "Word, Excel, PowerPoint, Outlook and OneDrive are now in your app menu (sign in with your Microsoft account)."
+  info "Local files: right-click a .docx/.xlsx/.pptx > Open with Microsoft 365 (uploads it to your OneDrive). First run: m365-open --login"
+  if [ "$DRY_RUN" != 1 ] && have xdg-mime \
+     && confirm "Make 'Open with Microsoft 365' the default for .docx/.xlsx/.pptx (double-click)? This replaces your current default" n; then
+    local m
+    for m in application/vnd.openxmlformats-officedocument.wordprocessingml.document application/msword \
+             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet application/vnd.ms-excel \
+             application/vnd.openxmlformats-officedocument.presentationml.presentation application/vnd.ms-powerpoint; do
+      xdg-mime default microsoft-open-with.desktop "$m"
+    done
+    ok "double-clicking Office files now opens them in Microsoft 365"
+  fi
 }
 
 comp_web() {

@@ -7,7 +7,8 @@ case "$1" in
   powerpoint) url=https://www.office.com/launch/powerpoint ;;
   outlook)    url=https://outlook.office.com/mail/ ;;
   onedrive)   url=https://onedrive.live.com/ ;;
-  *) echo "usage: m365 word|excel|powerpoint|outlook|onedrive" >&2; exit 2 ;;
+  open)       url="${2:?usage: m365 open URL}" ;;   # any Microsoft 365 address, used by m365-open
+  *) echo "usage: m365 word|excel|powerpoint|outlook|onedrive|open URL" >&2; exit 2 ;;
 esac
 for b in google-chrome-stable google-chrome chromium chromium-browser brave-browser microsoft-edge microsoft-edge-stable; do
   if command -v "$b" >/dev/null 2>&1; then

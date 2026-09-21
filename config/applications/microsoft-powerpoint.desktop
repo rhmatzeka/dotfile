@@ -2,7 +2,7 @@
 Type=Application
 Name=Microsoft PowerPoint (web)
 Comment=Microsoft PowerPoint in its own window (Microsoft 365 web app; sign in with your Microsoft account)
-Exec=m365 powerpoint
+Exec=sh -c "exec ~/.local/bin/m365 powerpoint"
 Icon=x-office-presentation
 Terminal=false
 Categories=Office;Presentation;

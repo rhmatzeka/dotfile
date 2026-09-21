@@ -1,0 +1,60 @@
+#!/bin/sh
+# "Open with Microsoft 365": send a local Word/Excel/PowerPoint file to YOUR OneDrive (a private folder, no public link)
+# and open it in Microsoft's web app, in its own window.
+#
+#   m365-open FILE...           upload and open
+#   m365-open --pull FILE       bring the OneDrive version back over the local file (the old one is kept as FILE.bak)
+#   m365-open --login           sign in to your Microsoft account once (opens a browser page)
+#
+# Needs rclone. Microsoft Office itself does not exist for Linux, so the file has to live on OneDrive to be edited
+# with Word/Excel/PowerPoint; your edits are saved there, use --pull to copy them back.
+set -eu
+
+REMOTE="${M365_REMOTE:-m365}"
+DIR="${M365_DIR:-Open with (Linux)}"
+
+say() { echo "m365-open: $*" >&2; command -v notify-send >/dev/null 2>&1 && notify-send -a "Microsoft 365" "Open with Microsoft 365" "$*" 2>/dev/null || true; }
+need() { command -v "$1" >/dev/null 2>&1 || { say "$1 is not installed"; exit 1; }; }
+need rclone; need jq; need curl
+
+logged_in() { rclone listremotes 2>/dev/null | grep -qx "$REMOTE:"; }
+
+login() {
+  echo "A browser page will open: sign in with your Microsoft account and accept."
+  echo "When rclone asks questions: choose 'OneDrive Personal or Business' and accept the defaults (Enter)."
+  rclone config create "$REMOTE" onedrive
+}
+
+# encode each path segment for the Graph API
+enc() { printf '%s' "$1" | jq -Rr 'split("/") | map(@uri) | join("/")'; }
+
+if [ "${1:-}" = "--login" ]; then login; exit 0; fi
+
+if ! logged_in; then
+  say "not signed in yet. Run in a terminal:  m365-open --login"
+  exit 1
+fi
+
+if [ "${1:-}" = "--pull" ]; then
+  f="${2:?usage: m365-open --pull FILE}"; name="$(basename "$f")"
+  [ -e "$f" ] && cp -p "$f" "$f.bak"
+  rclone copyto "$REMOTE:$DIR/$name" "$f" && say "updated $f from OneDrive (previous version: $f.bak)"
+  exit 0
+fi
+
+[ $# -gt 0 ] || { echo "usage: m365-open FILE..." >&2; exit 2; }
+for f in "$@"; do
+  [ -f "$f" ] || { say "not a file: $f"; continue; }
+  name="$(basename "$f")"
+  say "uploading $name to OneDrive..."
+  rclone copyto "$f" "$REMOTE:$DIR/$name" || { say "upload failed: $name"; continue; }
+  # rclone just refreshed its token; ask Microsoft Graph for the file's web address (a private, signed-in link)
+  token="$(rclone config dump | jq -r --arg r "$REMOTE" '.[$r].token | fromjson | .access_token')"
+  url="$(curl -fsS -H "Authorization: Bearer $token" "https://graph.microsoft.com/v1.0/me/drive/root:/$(enc "$DIR/$name")" | jq -r '.webUrl // empty')" || url=""
+  if [ -z "$url" ]; then
+    say "uploaded, but could not get its address; opening your OneDrive instead"
+    url="https://onedrive.live.com/"
+  fi
+  m365 open "$url" &
+done
+wait
