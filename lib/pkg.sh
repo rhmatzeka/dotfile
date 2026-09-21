@@ -32,6 +32,7 @@ pm_names() {
     nodejs)     [ "$PKG_FAMILY" = suse ] && echo nodejs-default || echo nodejs ;;
     npm)        [ "$PKG_FAMILY" = suse ] && echo npm-default || echo npm ;;
     chsh)       [ "$PKG_FAMILY" = fedora ] && echo util-linux-user ;;
+    python-venv) [ "$PKG_FAMILY" = debian ] && echo "python3-venv python3-pip" ;;
     php)        case "$PKG_FAMILY" in
                   debian) echo "php-cli php-mysql php-mbstring php-xml php-curl php-zip php-gd php-intl" ;;
                   arch)   echo "php php-gd" ;;

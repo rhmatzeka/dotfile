@@ -1,0 +1,43 @@
+diff --git a/modules/bar/popouts/Bluetooth.qml b/modules/bar/popouts/Bluetooth.qml
+index 27bf5895..883bb8c5 100644
+--- a/modules/bar/popouts/Bluetooth.qml
++++ b/modules/bar/popouts/Bluetooth.qml
+@@ -19,6 +19,20 @@ ColumnLayout {
+     width: 300
+     spacing: Tokens.spacing.small
+ 
++    // Devices that do not broadcast a name show up as their MAC address (typically the many anonymous phones and
++    // trackers around you in public). Hide those unless they are connected or paired, and list audio devices
++    // (earbuds, headsets, speakers) first so they are easy to find.
++    function isUnnamed(d): bool {
++        return /^([0-9A-Fa-f]{2}[-:]){5}[0-9A-Fa-f]{2}$/.test(d.name ?? "");
++    }
++
++    function isAudio(d): bool {
++        const i = d.icon ?? "";
++        return i.includes("headset") || i.includes("headphones") || i.includes("audio");
++    }
++
++    readonly property var visibleDevices: [...Bluetooth.devices.values].filter(d => d.connected || d.paired || !isUnnamed(d)) // qmllint disable unresolved-type
++
+     StyledText {
+         Layout.topMargin: Tokens.padding.medium
+         Layout.rightMargin: Tokens.padding.extraSmall
+@@ -50,7 +64,7 @@ ColumnLayout {
+         Layout.topMargin: Tokens.spacing.small
+         Layout.rightMargin: Tokens.padding.extraSmall
+         text: {
+-            const devices = Bluetooth.devices.values; // qmllint disable unresolved-type
++            const devices = root.visibleDevices;
+             const connected = devices.filter(d => d.connected).length;
+             if (connected > 0)
+                 // TRANSLATORS: %n = total paired devices, %1 = how many of them are connected
+@@ -63,7 +77,7 @@ ColumnLayout {
+ 
+     Repeater {
+         model: ScriptModel {
+-            values: [...Bluetooth.devices.values].sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired) || a.name.localeCompare(b.name)).slice(0, 5) // qmllint disable unresolved-type
++            values: [...root.visibleDevices].sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired) || (root.isAudio(b) - root.isAudio(a)) || a.name.localeCompare(b.name)).slice(0, 8) // qmllint disable unresolved-type
+         }
+ 
+         RowLayout {

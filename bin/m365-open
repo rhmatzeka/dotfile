@@ -6,6 +6,7 @@
 #   m365-open --pull FILE       bring the OneDrive version back over the local file (the old one is kept as FILE.bak)
 #   m365-open --login           sign in to your Microsoft account once (opens a browser page)
 #
+# A PDF is converted to .docx first (Word on the web cannot open PDFs); the layout of complex PDFs may shift.
 # Needs rclone. Microsoft Office itself does not exist for Linux, so the file has to live on OneDrive to be edited
 # with Word/Excel/PowerPoint; your edits are saved there, use --pull to copy them back.
 set -eu
@@ -43,8 +44,21 @@ if [ "${1:-}" = "--pull" ]; then
 fi
 
 [ $# -gt 0 ] || { echo "usage: m365-open FILE..." >&2; exit 2; }
+PDF2DOCX="${M365_PDF2DOCX:-${XDG_DATA_HOME:-$HOME/.local/share}/rhmatzeka-tools/pdf2docx-venv/bin/pdf2docx}"
+tmpdirs=""
+trap 'for d in $tmpdirs; do rm -rf "$d"; done' EXIT
 for f in "$@"; do
   [ -f "$f" ] || { say "not a file: $f"; continue; }
+  case "$f" in
+    *.pdf|*.PDF)
+      [ -x "$PDF2DOCX" ] || PDF2DOCX="$(command -v pdf2docx || true)"
+      [ -n "$PDF2DOCX" ] || { say "converting PDFs needs pdf2docx (installed by the dotfile 'apps' component)"; continue; }
+      d="$(mktemp -d)"; tmpdirs="$tmpdirs $d"
+      base="$(basename "$f")"; base="${base%.*}"
+      say "converting $(basename "$f") to Word format (this can take a minute for long PDFs)..."
+      "$PDF2DOCX" convert "$f" "$d/$base.docx" >/dev/null 2>&1 || { say "conversion failed: $(basename "$f")"; continue; }
+      f="$d/$base.docx" ;;
+  esac
   name="$(basename "$f")"
   say "uploading $name to OneDrive..."
   rclone copyto "$f" "$REMOTE:$DIR/$name" || { say "upload failed: $name"; continue; }

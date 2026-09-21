@@ -166,6 +166,14 @@ build_shell() {
   if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would build caelestia-shell ($REF_SHELL)"; return 0; fi
   step "caelestia-shell"; env_build
   git_clone https://github.com/caelestia-dots/shell.git "$BUILD/caelestia-shell" "$REF_SHELL"
+  # small fixes on top of the pinned upstream (GPL-3.0, so they are shipped as patches, not as copies of the files)
+  local pf
+  for pf in "$C"/caelestia/patches/*.patch; do
+    [ -f "$pf" ] || continue
+    if git -C "$BUILD/caelestia-shell" apply --check "$pf" 2>/dev/null; then
+      git -C "$BUILD/caelestia-shell" apply "$pf" && ok "applied $(basename "$pf")"
+    else info "$(basename "$pf") is already applied or no longer fits: skipped"; fi
+  done
   mkdir -p "$HOME/.config/quickshell/caelestia"
   cmake_project caelestia-shell "$BUILD/caelestia-shell" \
     -DCMAKE_INSTALL_RPATH="$PREFIX/lib;$GNU" -DINSTALL_LIBDIR=lib/caelestia -DINSTALL_QMLDIR=qml \

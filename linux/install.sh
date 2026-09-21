@@ -302,7 +302,15 @@ comp_apps() {
   if [ -z "$b" ]; then info "no Chromium-based browser found: installing Chromium for the app windows"; pkg_need chromium || return 1; fi
   backup_and_link "$DOTFILES_DIR/bin/m365" "$HOME/.local/bin/m365"
   backup_and_link "$DOTFILES_DIR/bin/m365-open" "$HOME/.local/bin/m365-open"
-  pkg_optional rclone jq
+  pkg_optional rclone jq python-venv
+  # PDF -> .docx converter for "Open with Microsoft 365" (Word on the web cannot open PDFs); kept in its own virtualenv
+  local venv="${XDG_DATA_HOME:-$HOME/.local/share}/rhmatzeka-tools/pdf2docx-venv"
+  if [ -x "$venv/bin/pdf2docx" ]; then ok "pdf2docx already installed"
+  elif [ "$DRY_RUN" = 1 ]; then info "[dry-run] would install pdf2docx into a virtualenv"
+  elif have python3 && python3 -m venv "$venv" >/dev/null 2>&1; then
+    "$venv/bin/pip" install -q pdf2docx >/dev/null 2>&1 && ok "pdf2docx installed (PDF conversion)" \
+      || warn "could not install pdf2docx; PDFs cannot be converted for Word (everything else works)"
+  else warn "python3 venv is unavailable; PDFs cannot be converted for Word (everything else works)"; fi
   local f
   for f in "$C"/applications/*.desktop; do
     backup_and_link "$f" "$HOME/.local/share/applications/$(basename "$f")"

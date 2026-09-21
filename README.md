@@ -55,7 +55,7 @@ ever fails, the same script is at
 | `apps` | Microsoft 365 web apps (Word, Excel, PowerPoint, Outlook, OneDrive) in their own windows, plus **Open with Microsoft 365** for local files (uploads to a private folder of your OneDrive with rclone, then opens it in Word/Excel/PowerPoint on the web), PDF viewer, VLC, GIMP. Pre-selected only when a graphical session is running |
 | `web` | Web development: PHP, Composer, MariaDB, Apache, phpMyAdmin. Services are **not** started unless you say yes (Apache listens on port 80); no passwords are set |
 | `rust` | Rust through the official rustup installer: stable toolchain, clippy, rustfmt, rust-analyzer |
-| `desktop` | Hyprland + Caelestia shell, plus Caelestia's btop, fastfetch, foot, micro, thunar, zed and fish configs (only where you have none). **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
+| `desktop` | Hyprland + Caelestia shell (with a small patch: the Bluetooth panel hides devices that only show a MAC address and lists audio devices first), plus Caelestia's btop, fastfetch, foot, micro, thunar, zed and fish configs (only where you have none). **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
 
 The default selection is everything except `desktop`.
 
@@ -163,5 +163,5 @@ terminal browser, developer environment, unixporn.
 
 The code in this repository is MIT licensed. The colour palette is [Dracula](https://draculatheme.com) (MIT) with a cyan
 accent. These are downloaded during installation and are **not** redistributed here: Oh My Zsh (MIT), the NvChad starter
-(Unlicense), Browsh (LGPL-2.1), quickshell and the Caelestia shell/CLI (GPL-3.0, built from source), and the Hyprland
+(Unlicense), Browsh (LGPL-2.1), quickshell and the Caelestia shell/CLI (GPL-3.0, built from source; the Bluetooth fix is shipped as a patch in `config/caelestia/patches/`, not as a copy of upstream files), and the Hyprland
 configuration from `caelestia-dots/caelestia` (cloned from upstream).
