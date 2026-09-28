@@ -1,0 +1,22 @@
+diff --git a/modules/bar/popouts/TrayMenu.qml b/modules/bar/popouts/TrayMenu.qml
+index 59a88e91..8a9bee28 100644
+--- a/modules/bar/popouts/TrayMenu.qml
++++ b/modules/bar/popouts/TrayMenu.qml
+@@ -145,7 +145,7 @@ StackView {
+                             anchors.leftMargin: icon.active ? Tokens.spacing.medium : 0
+ 
+                             text: labelMetrics.elidedText
+-                            color: item.modelData.enabled ? Colours.palette.m3onSurface : Colours.palette.m3outline
++                            color: item.modelData.enabled ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
+                         }
+ 
+                         TextMetrics {
+@@ -169,7 +169,7 @@ StackView {
+ 
+                             sourceComponent: MaterialIcon {
+                                 text: "chevron_right"
+-                                color: item.modelData.enabled ? Colours.palette.m3onSurface : Colours.palette.m3outline
++                                color: item.modelData.enabled ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
+                             }
+                         }
+                     }

@@ -1,0 +1,86 @@
+diff --git a/modules/bar/popouts/Bluetooth.qml b/modules/bar/popouts/Bluetooth.qml
+index 883bb8c5..e7daffc5 100644
+--- a/modules/bar/popouts/Bluetooth.qml
++++ b/modules/bar/popouts/Bluetooth.qml
+@@ -31,6 +31,9 @@ ColumnLayout {
+         return i.includes("headset") || i.includes("headphones") || i.includes("audio");
+     }
+ 
++    // No adapter at all (chip failed to start): say so instead of showing switches that do nothing
++    readonly property bool hasAdapter: !!Bluetooth.defaultAdapter // qmllint disable unresolved-type
++
+     readonly property var visibleDevices: [...Bluetooth.devices.values].filter(d => d.connected || d.paired || !isUnnamed(d)) // qmllint disable unresolved-type
+ 
+     StyledText {
+@@ -40,7 +43,54 @@ ColumnLayout {
+         font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
+     }
+ 
++    StyledRect {
++        Layout.fillWidth: true
++        Layout.rightMargin: Tokens.padding.extraSmall
++        visible: !root.hasAdapter
++        implicitHeight: warnLayout.implicitHeight + Tokens.padding.medium * 2
++        radius: Tokens.rounding.medium
++        color: Colours.palette.m3errorContainer
++
++        RowLayout {
++            id: warnLayout
++
++            anchors.fill: parent
++            anchors.margins: Tokens.padding.medium
++            spacing: Tokens.spacing.medium
++
++            MaterialIcon {
++                Layout.alignment: Qt.AlignTop
++                text: "bluetooth_disabled"
++                color: Colours.palette.m3onErrorContainer
++                fontStyle: Tokens.font.icon.medium
++            }
++
++            ColumnLayout {
++                Layout.fillWidth: true
++                spacing: Tokens.spacing.extraSmall / 2
++
++                StyledText {
++                    Layout.fillWidth: true
++                    text: Tr.tr("Bluetooth adapter not detected")
++                    color: Colours.palette.m3onErrorContainer
++                    font: Tokens.font.body.builders.small.weight(Font.Medium).build()
++                    wrapMode: Text.WordWrap
++                }
++
++                StyledText {
++                    Layout.fillWidth: true
++                    text: Tr.tr("The chip did not start. Shut the laptop down fully (not restart), wait 10 seconds, then turn it on.")
++                    color: Colours.palette.m3onErrorContainer
++                    font: Tokens.font.label.small
++                    wrapMode: Text.WordWrap
++                }
++            }
++        }
++    }
++
+     Toggle {
++        enabled: root.hasAdapter
++        opacity: enabled ? 1 : 0.5
+         label: Tr.trCtx("Enabled", "toggle label")
+         checked: Bluetooth.defaultAdapter?.enabled ?? false // qmllint disable unresolved-type
+         toggle.onToggled: {
+@@ -51,6 +101,8 @@ ColumnLayout {
+     }
+ 
+     Toggle {
++        enabled: root.hasAdapter
++        opacity: enabled ? 1 : 0.5
+         label: Tr.trCtx("Discovering", "bluetooth adapter state")
+         checked: Bluetooth.defaultAdapter?.discovering ?? false // qmllint disable unresolved-type
+         toggle.onToggled: {
+@@ -63,6 +115,7 @@ ColumnLayout {
+     StyledText {
+         Layout.topMargin: Tokens.spacing.small
+         Layout.rightMargin: Tokens.padding.extraSmall
++        visible: root.hasAdapter
+         text: {
+             const devices = root.visibleDevices;
+             const connected = devices.filter(d => d.connected).length;

@@ -86,7 +86,7 @@ ever fails, the same script is at
 | `apps` | Microsoft 365 web apps (Word, Excel, PowerPoint, Outlook, OneDrive) in their own windows, plus **Open with Microsoft 365** for local files (converts PDFs to .docx, uploads the file to a private folder of your OneDrive through the Microsoft Graph API, using rclone only for the sign-in, then opens it on the web). Double-clicking Word/Excel/PowerPoint files does this; for PDFs (which stay in your PDF viewer unless you agree to change that during installation) use the Thunar right-click entry **Open with Microsoft 365**. A file that is already open in Word online is not uploaded again (OneDrive locks it); the open copy is shown instead, PDF viewer, VLC, GIMP. Pre-selected only when a graphical session is running |
 | `web` | Web development: PHP, Composer, MariaDB, Apache, phpMyAdmin. Services are **not** started unless you say yes (Apache listens on port 80); no passwords are set |
 | `rust` | Rust through the official rustup installer: stable toolchain, clippy, rustfmt, rust-analyzer |
-| `desktop` | Hyprland + Caelestia shell (with two small patches: the Bluetooth panel hides devices that only show a MAC address and lists audio devices first; notifications that contain HTML, such as Instagram's, show clean text), plus Caelestia's btop, fastfetch, foot, micro, thunar, zed and fish configs (only where you have none). **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
+| `desktop` | Hyprland + Caelestia shell with see-through, blurred panels and a few small patches: Bluetooth lists (bar panel and the pair-new-device page) hide devices that only show a MAC address and show the device type instead; the Bluetooth panel says so when no adapter is found instead of showing dead switches; WiFi password fields get an eye button to show what you typed; text on the transparent panels gets a thin halo so it stays readable on bright wallpapers; notifications that contain HTML, such as Instagram's, show clean text, plus Caelestia's btop, fastfetch, foot, micro, thunar, zed and fish configs (only where you have none). **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
 
 The default selection is everything except `desktop`.
 
@@ -134,6 +134,12 @@ If RAM is tight:
 `desktop` (Hyprland + Caelestia) is **Debian 13 only** because it depends on `trixie-backports` and on pinned build
 versions. On the other distributions it is not offered; install Hyprland from your repositories and follow
 [caelestia-dots/caelestia](https://github.com/caelestia-dots/caelestia).
+
+**Laptops with a MediaTek MT7902 (Filogic 310) WiFi/Bluetooth card** (some ASUS Vivobooks): Debian 13's 6.12 kernel
+has no driver for its WiFi, and Bluetooth only starts some of the time (`hci0: Opcode 0x0c03 failed: -110`, then
+"No default controller available"). The backports kernel supports both. The installer does not change your kernel;
+do it yourself with `sudo apt install -t trixie-backports linux-image-amd64 firmware-mediatek` and reboot. The old
+kernel stays in the GRUB "Advanced options" menu.
 
 On **Arch**, keep the system up to date (`sudo pacman -Syu`) before running the installer: it installs with
 `pacman -S --needed` and does not refresh the package database itself, to avoid a partial upgrade.
@@ -224,5 +230,5 @@ terminal browser, developer environment, unixporn.
 
 The code in this repository is MIT licensed. The colour palette is [Dracula](https://draculatheme.com) (MIT) with a cyan
 accent. These are downloaded during installation and are **not** redistributed here: Oh My Zsh (MIT), the NvChad starter
-(Unlicense), Browsh (LGPL-2.1), quickshell and the Caelestia shell/CLI (GPL-3.0, built from source; the Bluetooth fix is shipped as a patch in `config/caelestia/patches/`, not as a copy of upstream files), and the Hyprland
+(Unlicense), Browsh (LGPL-2.1), quickshell and the Caelestia shell/CLI (GPL-3.0, built from source; the fixes are shipped as patches in `config/caelestia/patches/`, not as a copy of upstream files), and the Hyprland
 configuration from `caelestia-dots/caelestia` (cloned from upstream).

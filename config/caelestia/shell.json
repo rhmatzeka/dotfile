@@ -10,5 +10,8 @@
                 { "timeout": 1200, "idleAction": ["suspendThenHibernate"] }
             ]
         }
+    },
+    "appearance": {
+        "transparency": { "enabled": true, "base": 0.55, "layers": 0.35 }
     }
 }

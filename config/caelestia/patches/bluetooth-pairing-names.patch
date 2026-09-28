@@ -1,0 +1,80 @@
+diff --git a/modules/nexus/pages/bluetooth/BluetoothPairing.qml b/modules/nexus/pages/bluetooth/BluetoothPairing.qml
+index 25c50447..0e31dc17 100644
+--- a/modules/nexus/pages/bluetooth/BluetoothPairing.qml
++++ b/modules/nexus/pages/bluetooth/BluetoothPairing.qml
+@@ -17,6 +17,40 @@ PageBase {
+ 
+     readonly property BluetoothAdapter adapter: Bluetooth.defaultAdapter // qmllint disable unresolved-type
+ 
++    // Devices that do not broadcast a name only show their MAC address (anonymous phones, trackers, TVs nearby).
++    // Hide those unless they are being paired, and show the device type instead of the address.
++    readonly property var unpaired: Bluetooth.devices.values.filter(d => !d.bonded) // qmllint disable unresolved-type
++    readonly property var named: unpaired.filter(d => d.pairing || !isUnnamed(d))
++    readonly property int hiddenCount: unpaired.length - named.length
++
++    function isUnnamed(d): bool {
++        const n = d.name ?? "";
++        return !n || /^([0-9A-Fa-f]{2}[-:]){5}[0-9A-Fa-f]{2}$/.test(n);
++    }
++
++    function deviceType(icon: string): string {
++        const i = icon ?? "";
++        if (i.includes("headset") || i.includes("headphones"))
++            return Tr.tr("Headphones");
++        if (i.includes("audio"))
++            return Tr.tr("Speaker");
++        if (i.includes("phone"))
++            return Tr.tr("Phone");
++        if (i.includes("computer"))
++            return Tr.tr("Computer");
++        if (i.includes("mouse"))
++            return Tr.tr("Mouse");
++        if (i.includes("keyboard"))
++            return Tr.tr("Keyboard");
++        if (i.includes("gaming"))
++            return Tr.tr("Game controller");
++        if (i.includes("video") || i.includes("display"))
++            return Tr.tr("TV / display");
++        if (i.includes("printer"))
++            return Tr.tr("Printer");
++        return Tr.tr("Bluetooth device");
++    }
++
+     function setScan(on: bool): void {
+         if (adapter?.enabled)
+             adapter.discovering = on;
+@@ -61,6 +95,16 @@ PageBase {
+                 color: Colours.palette.m3onSurfaceVariant
+                 font: Tokens.font.body.small
+             }
++
++            StyledText {
++                anchors.right: parent.right
++                anchors.verticalCenter: headerText.verticalCenter
++                anchors.rightMargin: Tokens.padding.large
++                visible: root.hiddenCount > 0
++                text: Tr.trN("%n unnamed hidden", "%n unnamed hidden", root.hiddenCount)
++                color: Colours.palette.m3outline
++                font: Tokens.font.label.small
++            }
+         }
+ 
+         ItemList {
+@@ -75,7 +119,7 @@ PageBase {
+             list.anchors.top: scanIndicator.bottom
+ 
+             model: ScriptModel {
+-                values: Bluetooth.devices.values.filter(d => !d.bonded).sort((a, b) => (b.pairing - a.pairing) || a.name.localeCompare(b.name)) // qmllint disable unresolved-type
++                values: [...root.named].sort((a, b) => (b.pairing - a.pairing) || a.name.localeCompare(b.name))
+             }
+ 
+             delegate: Item {
+@@ -147,7 +191,7 @@ PageBase {
+ 
+                         StyledText {
+                             Layout.fillWidth: true
+-                            text: newDevice.modelData?.pairing ? Tr.tr("Pairing...") : (newDevice.modelData?.address ?? "")
++                            text: newDevice.modelData?.pairing ? Tr.tr("Pairing...") : root.deviceType(newDevice.modelData?.icon ?? "")
+                             color: Colours.palette.m3outline
+                             font: Tokens.font.label.small
+                             elide: Text.ElideRight

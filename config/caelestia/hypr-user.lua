@@ -34,3 +34,18 @@ end
 -- Super+A HIDES the focused window ("Away"): it is sent quietly to workspace 10 (not the scratchpad, which overlays every
 -- workspace and stops workspace swiping). Bring it back: Super+0, then Super+Alt+1..9 to move it to a workspace.
 hl.bind("SUPER + A", hl.dsp.window.move({ workspace = "10", follow = false }))
+
+-- Transparent Caelestia panels: a softer, slightly darker blur keeps their text readable over bright or busy
+-- wallpapers (Hyprland default: size 8, passes 2, brightness 1.0, contrast 0.89). Applies to every blurred surface.
+hl.config({
+    decoration = {
+        blur = {
+            size       = 10,
+            passes     = 3,
+            brightness = 0.72,
+            contrast   = 1.0,
+            vibrancy   = 0.25,
+            noise      = 0.015,
+        },
+    },
+})
