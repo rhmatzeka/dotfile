@@ -204,7 +204,7 @@ install.sh  uninstall.sh        entry points (OS detection)
 lib/common.sh  lib/pkg.sh        shared helpers; pkg.sh maps package names per distribution
 linux/                          installer for every family: install.sh, uninstall.sh
 linux/debian/desktop.sh         Hyprland + Caelestia build (Debian 13 only)
-config/                         zsh, starship, tmux, nvim, ghostty, elinks, caelestia
+config/                         zsh, starship, tmux, nvim, ghostty, elinks, caelestia, claude (Claude Code skill)
 bin/                            small scripts (web, firefox-for-browsh)
 docs/                           preview placeholder, how-tos
 tests/clean-rootfs.sh           install into a clean Debian/Ubuntu/Arch/Fedora/openSUSE root filesystem and check it
@@ -225,6 +225,18 @@ for Arch).
 dotfiles, Linux setup script, Debian dotfiles, Ubuntu dotfiles, Arch Linux dotfiles, Fedora dotfiles, openSUSE dotfiles, one-line installer, Hyprland dotfiles, Hyprland rice,
 Caelestia shell install, Wayland desktop, NvChad setup, Neovim config, zsh + starship + tmux, Ghostty config,
 terminal browser, developer environment, unixporn.
+
+## Claude Code skill library (optional, manual)
+
+`config/claude/skills/skill-library` is a small [Claude Code](https://claude.com/claude-code) skill that keeps big skill
+collections such as [ECC](https://github.com/affaan-m/ECC) out of every session's context. Instead of installing hundreds
+of skills as a plugin, the repos are cloned into `~/.claude/skill-repos/`, and Claude searches them with
+`scripts/find.py` and reads only the one or two files a task needs. It is not part of the installer; set it up by hand:
+
+```bash
+git clone https://github.com/affaan-m/ECC.git ~/.claude/skill-repos/ECC
+mkdir -p ~/.claude/skills && cp -r config/claude/skills/skill-library ~/.claude/skills/
+```
 
 ## License and credits
 
