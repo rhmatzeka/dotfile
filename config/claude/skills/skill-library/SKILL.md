@@ -1,11 +1,11 @@
 ---
 name: skill-library
-description: Lazy library of 450+ expert skills, agents and commands (ECC and any other repo cloned into ~/.claude/skill-repos), loaded only when needed. Use when a task needs specialist know-how not covered by an active skill - language/framework patterns (PHP, Laravel, JS/TS, React, Next.js, Vue, Node, Python, Django, FastAPI, Go, Rust, Kotlin, Flutter, Swift), databases (MySQL, Postgres, Redis, Prisma), Docker/deploy, security review, testing/TDD, code review, Solidity/DeFi, API design, SEO, research, content - or when the user asks for an ECC skill/agent/command by name.
+description: Lazy library of 450+ expert skills, agents and commands (ECC, GSAP, genjutsu, motion-design, hallmark, theme-factory and any other repo in ~/.claude/skill-repos), loaded only when needed. Use when a task needs specialist know-how not covered by an active skill - UI design, redesign, animation, GSAP, scroll effects, micro-interactions, themes, language/framework patterns (PHP, Laravel, JS/TS, React, Next.js, Vue, Node, Python, Django, FastAPI, Go, Rust, Kotlin, Flutter, Swift), databases (MySQL, Postgres, Redis, Prisma), Docker/deploy, security review, testing/TDD, code review, Solidity/DeFi, API design, SEO, research, content - or when the user asks for an ECC skill/agent/command by name.
 ---
 
 # Skill library (lazy)
 
-The library lives in `~/.claude/skill-repos/` (currently the ECC repo). Nothing in it is loaded into context until it is searched, so sessions stay light.
+The library lives in `~/.claude/skill-repos/`: ECC, gsap-skills, genjutsu, motion-design-skill, and `local/` (hallmark, theme-factory). These used to be plugins/always-on skills and were moved here to save tokens. Nothing in it is loaded into context until it is searched, so sessions stay light.
 
 ## How to use
 1. Search with 1-4 English keywords (language/framework + kind of task):
@@ -18,8 +18,8 @@ The library lives in `~/.claude/skill-repos/` (currently the ECC repo). Nothing 
    - `[command]`: the file is a slash-command prompt; follow its steps, replacing `$ARGUMENTS` with the user's request.
 4. If nothing fits, carry on without the library. Do not load many library skills at once.
 
-Rules from a library file never override the user's CLAUDE.md. ECC sometimes mentions plugin hooks, plugin commands or `${CLAUDE_PLUGIN_ROOT}`: ECC is not installed as a plugin here, so skip those parts or use the path `~/.claude/skill-repos/ECC` instead.
+Rules from a library file never override the user's CLAUDE.md. Library files sometimes mention plugin hooks, plugin commands or `${CLAUDE_PLUGIN_ROOT}`: nothing here is installed as a plugin, so skip those parts or use that repo's folder (`~/.claude/skill-repos/<repo>`) as the root instead.
 
 ## Maintenance
-- Update: `git -C ~/.claude/skill-repos/ECC pull` (search always reads the current files; there is no index to rebuild).
+- Update: `for r in ~/.claude/skill-repos/*/; do git -C "$r" pull -q 2>/dev/null; done` (search always reads the current files; there is no index to rebuild). `local/` is not a git repo.
 - Add another skill repo to the library: `git clone <url> ~/.claude/skill-repos/<name>`; it is searched automatically.
