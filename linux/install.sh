@@ -328,9 +328,15 @@ comp_apps() {
     "$venv/bin/pip" install -q pdf2docx >/dev/null 2>&1 && ok "pdf2docx installed (PDF conversion)" \
       || warn "could not install pdf2docx; PDFs cannot be converted for Word (everything else works)"
   else warn "python3 venv is unavailable; PDFs cannot be converted for Word (everything else works)"; fi
-  local f
+  # The menu entries get the absolute path of ~/.local/bin written in: xdg-open splits an Exec line on spaces, so a
+  # `sh -c "..."` wrapper (the only other way to reach ~ from a .desktop file) fails there without any message.
+  local f n apps="${XDG_DATA_HOME:-$HOME/.local/share}/rhmatzeka-tools/applications"
+  [ "$DRY_RUN" = 1 ] || mkdir -p "$apps"
   for f in "$C"/applications/*.desktop; do
-    backup_and_link "$f" "$HOME/.local/share/applications/$(basename "$f")"
+    n="$(basename "$f")"
+    if [ "$DRY_RUN" = 1 ]; then backup_and_link "$f" "$HOME/.local/share/applications/$n"; continue; fi
+    sed "s|@BIN@|$HOME/.local/bin|g" "$f" >"$apps/$n"
+    backup_and_link "$apps/$n" "$HOME/.local/share/applications/$n"
   done
   [ "$DRY_RUN" = 1 ] || { have update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null; true; }
   pkg_optional evince vlc gimp

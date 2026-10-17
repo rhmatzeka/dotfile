@@ -5,6 +5,7 @@
 #   m365-open FILE...           upload and open
 #   m365-open --pull FILE       bring the OneDrive version back over the local file (the old one is kept as FILE.bak)
 #   m365-open --login           sign in to your Microsoft account once (opens a browser page)
+#   m365-open --app word [FILE...]   used by the Word/Excel/PowerPoint menu entries: no file opens the empty app
 #
 # A PDF is converted to .docx first (Word on the web cannot open PDFs); the layout of complex PDFs may shift.
 # Needs rclone. Microsoft Office itself does not exist for Linux, so the file has to live on OneDrive to be edited
@@ -13,6 +14,12 @@ set -eu
 
 REMOTE="${M365_REMOTE:-m365}"
 DIR="${M365_DIR:-Open with (Linux)}"
+BIN="$(dirname "$0")"   # m365 sits next to this script; a menu entry may start it without ~/.local/bin on PATH
+
+if [ "${1:-}" = "--app" ]; then
+  app="${2:?usage: m365-open --app word|excel|powerpoint [FILE...]}"; shift 2
+  [ $# -gt 0 ] || exec "$BIN/m365" "$app"
+fi
 
 say() { echo "m365-open: $*" >&2; command -v notify-send >/dev/null 2>&1 && notify-send -a "Microsoft 365" "Open with Microsoft 365" "$*" 2>/dev/null || true; }
 need() { command -v "$1" >/dev/null 2>&1 || { say "$1 is not installed"; exit 1; }; }
@@ -124,7 +131,7 @@ for f in "$@"; do
     url="https://onedrive.live.com/"
   fi
   # Chrome may be started by this very call and then lives on as the browser: run it detached, never wait for it
-  setsid m365 open "$url" </dev/null >/dev/null 2>&1 &
+  setsid "$BIN/m365" open "$url" </dev/null >/dev/null 2>&1 &
   focus_doc "$name" &
   fpids="$fpids $!"
 done
