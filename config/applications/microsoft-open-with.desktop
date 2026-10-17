@@ -2,7 +2,7 @@
 Type=Application
 Name=Open with Microsoft 365
 Comment=Upload the file to your OneDrive and open it in Word, Excel or PowerPoint (web)
-Exec=sh -c "exec ~/.local/bin/m365-open \\"\\$@\\"" sh %F
+Exec=@BIN@/m365-open %F
 Icon=applications-office
 Terminal=false
 NoDisplay=false
