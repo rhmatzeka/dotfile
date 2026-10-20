@@ -57,5 +57,6 @@ cat <<MSG
    ~/.local/opt/browsh     Browsh, ~/.local/opt/nvim, ~/.local/bin/{tree-sitter,starship,browsh,nvim}
    ~/.config/hypr          the Caelestia Hyprland config (only if it has a .rhmatzeka-dotfiles marker)
    /opt/qt-6.11.2, /opt/dart-sass, /usr/local/bin/{qs,sass,caelestia}   the desktop build (sudo rm -rf)
+   /etc/tmpfiles.d/hibernate-image-size.conf, /etc/systemd/system/systemd-hibernate.service.d/   hibernation fix (sudo rm)
    system packages (apt/pacman/dnf/zypper), fonts in ~/.local/share/fonts
 MSG

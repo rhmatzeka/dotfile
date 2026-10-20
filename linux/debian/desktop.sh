@@ -257,6 +257,20 @@ install_dots() { # the upstream Hyprland config, cloned here (it is not redistri
   for f in hypr-user.lua hypr-vars.lua shell.json; do backup_and_link "$C/caelestia/$f" "$HOME/.config/caelestia/$f"; done
 }
 
+install_power() { # the shell hibernates at critical battery: give hibernation room, and power off if it still fails
+  local src dst changed=0
+  for src in hibernate-image-size.conf:/etc/tmpfiles.d/hibernate-image-size.conf \
+             hibernate-poweroff-on-failure.conf:/etc/systemd/system/systemd-hibernate.service.d/poweroff-on-failure.conf; do
+    dst="${src#*:}"; src="$C/power/${src%%:*}"
+    if cmp -s "$src" "$dst"; then ok "$dst already in place"; continue; fi
+    if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would install $dst"; continue; fi
+    "${SUDO[@]}" install -Dm644 "$src" "$dst" && ok "installed $dst" && changed=1
+  done
+  [ "$changed" = 1 ] || return 0
+  "${SUDO[@]}" systemd-tmpfiles --create /etc/tmpfiles.d/hibernate-image-size.conf
+  "${SUDO[@]}" systemctl daemon-reload
+}
+
 finish() {
   if [ "$DRY_RUN" = 1 ]; then return 0; fi
   ensure_local_bin_in_path; export PATH="/usr/local/bin:$PATH"
@@ -272,5 +286,5 @@ preflight
 step "Packages"; enable_backports; install_packages
 build_qt; build_wayland; build_libcava; build_quickshell; build_m3shapes; build_shell
 install_qs_wrapper; install_cli; install_sass; install_fonts
-step "Configuration"; install_dots
+step "Configuration"; install_dots; install_power
 finish
