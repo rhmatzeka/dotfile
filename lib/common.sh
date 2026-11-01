@@ -41,8 +41,18 @@ run() {
   fi
 }
 
-# interactive  -> 0 when a person can answer: stdin is a terminal, or /dev/tty can really be opened
-interactive() { [ -t 0 ] || { : </dev/tty; } 2>/dev/null; }
+# Answers are read from the terminal even when the script itself came through a pipe. Tests point DOTFILES_TTY at a
+# file of answers; it is opened once (fd 7) so each question reads the next line instead of the first one again.
+DOTFILES_TTY="${DOTFILES_TTY:-/dev/tty}"
+
+# interactive  -> 0 when a person can answer: stdin is a terminal, or the terminal can really be opened
+interactive() { [ -t 0 ] || { : <"$DOTFILES_TTY"; } 2>/dev/null; }
+
+# tty_read VAR  -> one line of input into VAR
+tty_read() {
+  if [ -z "${_TTY_OPEN:-}" ]; then exec 7<"$DOTFILES_TTY" || return 1; _TTY_OPEN=1; fi
+  IFS= read -r "$1" <&7
+}
 
 # confirm "question" [y|n]  -> 0 for yes. Without a terminal, or with --yes, the default answer is used.
 confirm() {
@@ -52,7 +62,7 @@ confirm() {
     [ "$def" = y ]; return
   fi
   printf '  %s?%s %s %s ' "$C_PINK" "$C_OFF" "$q" "$hint" >&2
-  read -r ans </dev/tty || ans=""
+  tty_read ans || ans=""
   case "${ans:-$def}" in [yY]|[yY][eE][sS]) return 0 ;; *) return 1 ;; esac
 }
 
@@ -150,6 +160,17 @@ git_clone() {
     git clone -q --depth 1 "$url" "$dest"
   fi
 }
+
+# with_timeout SECONDS CMD...  -> timeout(1) where it exists (GNU coreutils; gtimeout from Homebrew), else just run CMD
+with_timeout() {
+  local s="$1"; shift
+  if have timeout; then timeout "$s" "$@"
+  elif have gtimeout; then gtimeout "$s" "$@"
+  else "$@"; fi
+}
+
+# linked_here DST  -> 0 when DST is a symlink into this repository (the component already put it there)
+linked_here() { [ -L "$1" ] && case "$(readlink "$1")" in "$DOTFILES_DIR"/*) true ;; *) false ;; esac; }
 
 # version_ge A B  -> 0 when A >= B (dotted numbers)
 version_ge() { [ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; }

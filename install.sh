@@ -5,7 +5,7 @@
 #   bash <(curl -fsSL https://dotfiles.rahmateka.my.id) --dry-run --all
 #
 # `bash <(...)` instead of `curl | bash` keeps the terminal attached, so the menu and sudo prompts work.
-# This file only detects the distribution family, fetches the repository to ~/.local/share/rhmatzeka-dotfile and hands over to the
+# This file only detects the system (macOS, or which Linux family), fetches the repository to ~/.local/share/rhmatzeka-dotfile and hands over to the
 # installer for that platform. Everything it will do is printed first; --dry-run changes nothing.
 set -euo pipefail
 
@@ -30,15 +30,14 @@ printf '\n%s%s  dotfiles %s%s\n' "$BD" "$CY" "$ACTION" "$OFF"
 printf '%s  https://github.com/rhmatzeka/dotfile%s\n\n' "$DM" "$OFF"
 
 # --- which OS? ---------------------------------------------------------------
-# Only Linux families are implemented: debian (Debian, Ubuntu, Mint...), arch (Arch, Manjaro, EndeavourOS...),
-# fedora (Fedora, RHEL-likes), suse (openSUSE). The real work is in linux/install.sh; this only says hello.
-FAMILY=""
+# macOS (beta, terminal and developer tools; the real work is in macos/install.sh), and the Linux families
+# debian (Debian, Ubuntu, Mint...), arch (Arch, Manjaro, EndeavourOS...), fedora (Fedora, RHEL-likes) and
+# suse (openSUSE), handled by linux/install.sh. This file only says hello.
+# Keep it bash 3.2 compatible: that is the bash macOS ships, and `bash <(curl ...)` runs it.
+FAMILY=""; PLATFORM=linux
 case "$(uname -s)" in
   Darwin)
-    bad "macOS is not supported yet."
-    say "Supported: Debian/Ubuntu, Arch, Fedora and openSUSE families. Contributions are welcome:"
-    say "https://github.com/rhmatzeka/dotfile/issues"
-    exit 1 ;;
+    PLATFORM=macos; FAMILY=macos ;;
   Linux)
     ids=" $(. /etc/os-release 2>/dev/null; printf '%s %s' "${ID:-}" "${ID_LIKE:-}") "
     case "$ids" in
@@ -47,21 +46,37 @@ case "$(uname -s)" in
       *" fedora "*|*" rhel "*|*" centos "*)   FAMILY=fedora ;;
       *" suse "*|*" opensuse "*|*" sles "*)   FAMILY=suse ;;
       *) bad "This Linux distribution is not supported yet (found:$ids)."
-         say "Supported: Debian/Ubuntu, Arch, Fedora and openSUSE families."
+         say "Supported: macOS, and the Debian/Ubuntu, Arch, Fedora and openSUSE families."
          exit 1 ;;
     esac ;;
   *) bad "Unsupported OS: $(uname -s)"; exit 1 ;;
 esac
-good "Detected: Linux / $FAMILY family"
+if [ "$PLATFORM" = macos ]; then
+  good "Detected: macOS $(sw_vers -productVersion 2>/dev/null) ($(uname -m))"
+  # git, and the compiler Homebrew and Neovim's parsers need, come with Apple's Command Line Tools.
+  # /usr/bin/git exists even without them (it only opens the installer dialog), so ask xcode-select instead.
+  if ! xcode-select -p >/dev/null 2>&1; then
+    say "Installing Apple's Command Line Tools (git, compiler). A dialog opens: click Install and wait."
+    xcode-select --install >/dev/null 2>&1 || true
+    waited=0
+    until xcode-select -p >/dev/null 2>&1; do
+      [ "$waited" -ge 3600 ] && { bad "The Command Line Tools are still missing after an hour; install them and run this again."; exit 1; }
+      sleep 10; waited=$((waited + 10))
+    done
+    good "Command Line Tools installed"
+  fi
+else
+  good "Detected: Linux / $FAMILY family"
+fi
 
 # --- where does the repository live? ------------------------------------------
 # Run from a checkout (bash ./install.sh)? Use it as is. Run through curl? Fetch it to ~/.local/share/rhmatzeka-dotfile.
 SELF="${BASH_SOURCE[0]:-}"
-if [ -n "$SELF" ] && [ -f "$SELF" ] && [ -f "$(dirname "$SELF")/linux/install.sh" ] && [ -z "${DOTFILES_FORCE_CLONE:-}" ]; then
+if [ -n "$SELF" ] && [ -f "$SELF" ] && [ -f "$(dirname "$SELF")/$PLATFORM/install.sh" ] && [ -z "${DOTFILES_FORCE_CLONE:-}" ]; then
   DOTFILES_DIR="$(cd "$(dirname "$SELF")" && pwd)"
   good "Using this checkout: $DOTFILES_DIR"
 else
-  if ! command -v git >/dev/null 2>&1; then
+  if ! command -v git >/dev/null 2>&1 && [ "$PLATFORM" = linux ]; then
     say "git is needed to fetch the repository."
     command -v sudo >/dev/null 2>&1 || { bad "git and sudo are both missing; install git first."; exit 1; }
     case "$FAMILY" in
@@ -92,7 +107,8 @@ else
 fi
 
 export DOTFILES_DIR
-TARGET="$DOTFILES_DIR/linux/$ACTION.sh"
+TARGET="$DOTFILES_DIR/$PLATFORM/$ACTION.sh"
 [ -f "$TARGET" ] || { bad "Missing $TARGET"; exit 1; }
 printf '\n'
-exec bash "$TARGET" "$@"
+# the same bash that runs this file (on macOS that is /bin/bash 3.2, which the installers are written for)
+exec "${BASH:-bash}" "$TARGET" "$@"

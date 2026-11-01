@@ -43,7 +43,7 @@ while IFS=$'\t' read -r dst src backup; do
   else
     warn "left alone (changed since install): ${dst/#$HOME/~}"; skipped=$((skipped+1))
   fi
-done < <(tac "$MANIFEST")
+done < <(awk '{ l[NR] = $0 } END { for (i = NR; i > 0; i--) print l[i] }' "$MANIFEST")   # tac is not on macOS
 
 if [ "$DRY_RUN" != 1 ]; then rm -f "$MANIFEST"; rmdir "$STATE_DIR" 2>/dev/null || true; fi
 printf '\n'; ok "$removed link(s) removed, $restored original file(s) restored, $skipped skipped."
@@ -60,3 +60,9 @@ cat <<MSG
    /etc/tmpfiles.d/hibernate-image-size.conf, /etc/systemd/system/systemd-hibernate.service.d/   hibernation fix (sudo rm)
    system packages (apt/pacman/dnf/zypper), fonts in ~/.local/share/fonts
 MSG
+if [ "$(uname -s)" = Darwin ]; then
+  cat <<'MSG'
+   macOS: Homebrew packages and apps (brew list; brew uninstall <name>), the font in ~/Library/Fonts,
+          Homebrew itself (see https://github.com/homebrew/install#uninstall-homebrew)
+MSG
+fi

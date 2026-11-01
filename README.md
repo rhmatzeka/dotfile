@@ -1,4 +1,4 @@
-# Linux dotfiles for Debian, Ubuntu, Arch, Fedora and openSUSE: zsh, tmux, Neovim, Ghostty and Hyprland in one command
+# Dotfiles for Linux (Debian, Ubuntu, Arch, Fedora, openSUSE) and macOS: zsh, tmux, Neovim, Ghostty and Hyprland in one command
 
 [![ci](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml/badge.svg)](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/rhmatzeka/dotfile)](LICENSE)
@@ -7,9 +7,11 @@
 ![Arch Linux](https://img.shields.io/badge/Arch-tested-1793D1?logo=archlinux&logoColor=white)
 ![Fedora 44](https://img.shields.io/badge/Fedora-44-51A2DA?logo=fedora&logoColor=white)
 ![openSUSE Tumbleweed](https://img.shields.io/badge/openSUSE-Tumbleweed-73BA25?logo=opensuse&logoColor=white)
+![macOS beta](https://img.shields.io/badge/macOS-beta-000000?logo=apple&logoColor=white)
 
-A one-command **Linux dotfiles installer** (Debian/Ubuntu, Arch, Fedora, openSUSE) for a fast terminal and an optional **Hyprland** desktop with the
-**Caelestia** shell. It sets up **zsh** (Oh My Zsh, starship), **tmux**, **Neovim** with **NvChad** (tree-sitter, LSP),
+A one-command **dotfiles installer** for Linux (Debian/Ubuntu, Arch, Fedora, openSUSE) and **macOS** (beta) for a fast
+terminal and, on Linux, an optional **Hyprland** desktop with the **Caelestia** shell. A checklist lets you pick only the
+parts you want, for example just the terminal setup on a Mac. It sets up **zsh** (Oh My Zsh, starship), **tmux**, **Neovim** with **NvChad** (tree-sitter, LSP),
 **Ghostty**, terminal browsers (Browsh, elinks, w3m) and a Dracula + cyan theme. Nothing is overwritten without a
 backup, and everything can be undone.
 
@@ -69,9 +71,67 @@ Every step can be rehearsed without changing anything:
 bash <(curl -fsSL https://dotfiles.rahmateka.my.id) --dry-run --all
 ```
 
+### The menu
+
+The installer shows a checklist. Type a number to check or uncheck a part, then press Enter. Parts that are already
+installed say so and start unchecked. Parts that cannot work on your system are listed separately and **cannot be
+selected** (on a Mac: the Hyprland desktop and the Microsoft 365 web-app launchers), so "all" never picks them by
+accident. Before anything is installed you get a summary with the big downloads and one more "Continue?".
+
+```
+  dotfiles installer - macOS (beta)
+
+  Choose what to install (type a number to check or uncheck it):
+
+    1. [x] base      Homebrew, git, ripgrep, fzf, eza, zoxide and the JetBrainsMono Nerd Font
+    2. [x] shell     zsh + Oh My Zsh + starship prompt (installed)
+    3. [x] tmux      tmux with a cyan/Dracula theme
+    4. [x] nvim      Neovim (NvChad) with tree-sitter parsers and LSP servers
+    5. [x] terminal  Ghostty + its config (Vim-style keys, dark theme)
+    6. [ ] browsers  Terminal browser: w3m (elinks and Browsh are Linux only: Homebrew has no elinks)
+    7. [ ] web       Web development: PHP, Composer, MariaDB, phpMyAdmin (services stay off unless you say yes)
+    8. [ ] rust      Rust toolchain via rustup (rustc, cargo, clippy, rustfmt, rust-analyzer)
+
+  Not available on this system (cannot be selected):
+     -  desktop   Hyprland + Caelestia desktop (Linux only)
+     -  apps      Microsoft 365 web-app launchers, Thunar menu (Linux only; on a Mac install Office from the App Store)
+
+  number check/uncheck  |  a all  |  n none  |  Enter continue  |  q quit
+```
+
 The short domain redirects to the script in this repository (see [docs/short-domain.md](docs/short-domain.md)). If it
 ever fails, the same script is at
 `https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.sh`.
+
+## Moving to a Mac
+
+On a new MacBook, open **Terminal** and run the same command:
+
+```bash
+bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
+```
+
+1. If Apple's Command Line Tools are missing, a dialog opens: click **Install** and wait (git and the compiler come
+   from there).
+2. The checklist appears with the terminal set (`base`, `shell`, `tmux`, `nvim`, `terminal`) already checked. Add
+   `web` or `rust` if you want them; the Linux-only parts are shown but cannot be picked.
+3. Homebrew is installed first if it is missing (it asks for your password once). Everything else comes from Homebrew,
+   so nothing needs `sudo` afterwards.
+4. Open **Ghostty** from Spotlight. It starts zsh with the same prompt, tmux, Neovim and colours as on Linux.
+
+Only the terminal setup, without asking: `bash <(curl -fsSL https://dotfiles.rahmateka.my.id) --yes`. Just a few
+parts: `... --only shell,tmux,terminal`. The configs are the same files on both systems, so a change you push here
+shows up on the other machine after the next install (or `git pull` in `~/.local/share/rhmatzeka-dotfile`).
+
+| Part | Linux | macOS |
+|---|---|---|
+| `base`, `shell`, `tmux`, `nvim`, `terminal`, `rust` | yes | yes (Homebrew; Ghostty itself is installed too) |
+| `browsers` | Browsh, elinks, w3m | w3m only (Homebrew has no elinks; no Browsh) |
+| `web` | PHP, Composer, MariaDB, Apache, phpMyAdmin | PHP, Composer, MariaDB, phpMyAdmin (served with `php -S`, no Apache) |
+| `apps` (Microsoft 365 web-app launchers) | yes | no (install Office for Mac instead) |
+| `desktop` (Hyprland + Caelestia) | Debian 13 | no |
+
+Your SSH keys, `.env` files and app logins are not part of this repository; copy them over yourself.
 
 ## What you get
 
@@ -88,7 +148,8 @@ ever fails, the same script is at
 | `rust` | Rust through the official rustup installer: stable toolchain, clippy, rustfmt, rust-analyzer |
 | `desktop` | Hyprland + Caelestia shell with see-through, blurred panels and a few small patches: Bluetooth lists (bar panel and the pair-new-device page) hide devices that only show a MAC address and show the device type instead; the Bluetooth panel says so when no adapter is found instead of showing dead switches; WiFi password fields get an eye button to show what you typed; text on the transparent panels gets a thin halo so it stays readable on bright wallpapers; notifications that contain HTML, such as Instagram's, show clean text; hibernation at critical battery gets enough free memory to succeed (`/sys/power/image_size` = 0) and the laptop powers off if it still fails, instead of staying on with a black screen (AMD GPUs do not come back from a failed hibernation), plus Caelestia's btop, fastfetch, foot, micro, thunar, zed and fish configs (only where you have none). **Debian 13 only, beta.** Builds Qt 6.11 from source (1 to 2 hours) |
 
-The default selection is everything except `desktop`.
+Checked by default: `base`, `shell`, `tmux`, `nvim` and `terminal` (plus `apps` on Linux when a graphical session is
+running). `web`, `rust`, `browsers` and `desktop` are only installed when you check them.
 
 ## Memory usage
 
@@ -129,7 +190,8 @@ If RAM is tight:
 | Arch Linux (and Manjaro, EndeavourOS, ... via `ID_LIKE=arch`) | Installed and checked from scratch in the official Arch bootstrap image. Only Arch itself was tested. `web` and `rust` also installed and checked from scratch |
 | Fedora 44 (and RHEL-likes via `ID_LIKE`) | Installed and checked from scratch in the official Fedora container image. `starship` is not in the Fedora repositories: its official installer is used. Only Fedora itself was tested. `web` and `rust` also installed and checked from scratch |
 | openSUSE Tumbleweed | Installed and checked from scratch in the official Tumbleweed image. Leap and SLE were not tested. `web` and `rust` also installed and checked from scratch |
-| Alpine, NixOS, Void, Gentoo, macOS | **Not supported.** Contributions are welcome (see below) |
+| macOS 13 or newer (Apple Silicon and Intel) | **Beta.** Everything except `desktop` and `apps`, through Homebrew. Checked on every push by GitHub Actions on `macos-latest` with Apple's own `/bin/bash` 3.2: the menu, a dry run of every part, and a real install of `shell`, `tmux`, `browsers` and `rust` followed by `uninstall`. Not yet run by hand on a real Mac; `nvim`, `terminal` (Ghostty) and `web` were only dry-run |
+| Alpine, NixOS, Void, Gentoo | **Not supported.** Contributions are welcome (see below) |
 
 `desktop` (Hyprland + Caelestia) is **Debian 13 only** because it depends on `trixie-backports` and on pinned build
 versions. On the other distributions it is not offered; install Hyprland from your repositories and follow
@@ -156,7 +218,8 @@ installed from the repositories when available.
   the previous Debian-only revision. Repeat it yourself with `tests/clean-rootfs.sh` (see below).
 - A user who **already has their own config files**: they are backed up, a second install does not back them up
   again, and `uninstall` puts the originals back.
-- `--dry-run` for every component, shellcheck, and a GitHub Actions run on Ubuntu for every push.
+- `--dry-run` for every component, shellcheck, scripted answers for the menu (`tests/menu.sh`), and GitHub Actions
+  runs on Ubuntu and macOS for every push.
 - Failures are not swallowed: a failed package step fails its component and the installer exits non-zero.
 
 **Not tested:** "Open with Microsoft 365" with a work or school (Microsoft 365 Business) account (it was tested end to end with one personal account: PDF converted, uploaded and opened), the extra Caelestia application configs installed by `desktop`, the `desktop` source build from scratch, the Microsoft 365 web apps opening in a real browser
@@ -167,7 +230,7 @@ above, and ARM machines.
 
 ```bash
 ./install.sh                    # interactive menu
-./install.sh --all              # every component, including desktop
+./install.sh --all              # every component this system supports (on Debian 13 that includes desktop)
 ./install.sh --only shell,nvim  # pick components
 ./install.sh --dry-run --all    # show what would happen, change nothing
 ./install.sh --yes              # no questions, use the default answers
@@ -196,18 +259,23 @@ are left in place; the list is printed at the end.
 ## How it works
 
 The top-level `install.sh` detects the OS, fetches this repository to `~/.local/share/rhmatzeka-dotfile`, and hands over to the installer for
-that platform (`linux/install.sh`, which uses `lib/pkg.sh` to talk to apt, pacman, dnf or zypper). Configs live in `config/` and are installed as symlinks, so editing them
+that platform: `linux/install.sh`, which uses `lib/pkg.sh` to talk to apt, pacman, dnf or zypper, or `macos/install.sh`,
+which uses Homebrew. Both use the same checklist (`lib/menu.sh`) and the same steps for Oh My Zsh, NvChad, elinks and
+rustup (`lib/parts.sh`). Everything the Mac runs is kept compatible with the bash 3.2 that macOS ships. Configs live in `config/` and are installed as symlinks, so editing them
 in that directory takes effect immediately. Shared helpers (backup, symlinks, dry run) are in `lib/common.sh`.
 
 ```
 install.sh  uninstall.sh        entry points (OS detection)
 lib/common.sh  lib/pkg.sh        shared helpers; pkg.sh maps package names per distribution
+lib/menu.sh  lib/parts.sh        the checklist, and the steps Linux and macOS share
 linux/                          installer for every family: install.sh, uninstall.sh
+macos/                          macOS installer (Homebrew); uninstall.sh reuses linux/uninstall.sh
 linux/debian/desktop.sh         Hyprland + Caelestia build (Debian 13 only)
 config/                         zsh, starship, tmux, nvim, ghostty, elinks, caelestia
 bin/                            small scripts (web, firefox-for-browsh)
 docs/                           preview placeholder, how-tos
 tests/clean-rootfs.sh           install into a clean Debian/Ubuntu/Arch/Fedora/openSUSE root filesystem and check it
+tests/menu.sh                   drive the checklist with scripted answers
 ```
 
 ## Adding another distribution
