@@ -17,13 +17,21 @@ export DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$HERE/.." && pwd)}"
 . "$DOTFILES_DIR/lib/common.sh"
 # shellcheck source=../lib/pkg.sh
 . "$DOTFILES_DIR/lib/pkg.sh"
+# shellcheck source=../lib/menu.sh
+. "$DOTFILES_DIR/lib/menu.sh"
+# shellcheck source=../lib/parts.sh
+. "$DOTFILES_DIR/lib/parts.sh"
 pkg_detect || { fail "This Linux distribution is not supported yet (Debian/Ubuntu, Arch, Fedora and openSUSE families are)."; exit 1; }
 
 C="$DOTFILES_DIR/config"
 ARCH="$(uname -m)"
 
 COMPONENTS=(base shell tmux nvim terminal browsers apps web rust)
-[ "$PKG_FAMILY" = debian ] && COMPONENTS+=(desktop)
+MENU_OFF=()
+# shellcheck disable=SC2034  # MENU_* are read by lib/menu.sh
+if [ "$PKG_FAMILY" = debian ]; then COMPONENTS+=(desktop)
+else MENU_OFF=("desktop|Hyprland + Caelestia: only implemented for Debian 13 so far; install Hyprland from your repositories and follow https://github.com/caelestia-dots/caelestia")
+fi
 declare -A DESC=(
   [base]="Base packages and the JetBrainsMono Nerd Font"
   [shell]="zsh + Oh My Zsh + starship prompt"
@@ -42,13 +50,38 @@ DEFAULTS=(base shell tmux nvim terminal)
 
 usage() { sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
-list_components() {
-  local c mark
-  for c in "${COMPONENTS[@]}"; do
-    mark=" "; for d in "${DEFAULTS[@]}"; do [ "$c" = "$d" ] && mark="*"; done
-    printf '  %s %-9s %s\n' "$mark" "$c" "${DESC[$c]}"
-  done
-  printf '\n  * = selected by default\n'
+# for lib/menu.sh
+# shellcheck disable=SC2034
+MENU_TITLE="Linux / $PKG_FAMILY"
+# shellcheck disable=SC2034
+MENU_ITEMS=("${COMPONENTS[@]}")
+# shellcheck disable=SC2034
+MENU_DEFAULTS=("${DEFAULTS[@]}")
+menu_desc() { printf '%s' "${DESC[$1]}"; }
+menu_status() {
+  case "$1" in
+    base)     fc-list 2>/dev/null | grep -qi "JetBrainsMono Nerd" && have rg && have fzf && echo installed ;;
+    shell)    linked_here "$HOME/.zshrc" && [ -d "$HOME/.oh-my-zsh" ] && echo installed ;;
+    tmux)     linked_here "$HOME/.config/tmux/tmux.conf" && have tmux && echo installed ;;
+    nvim)     linked_here "$HOME/.config/nvim/lua/plugins/dotfiles.lua" && have nvim && echo installed ;;
+    terminal) linked_here "$HOME/.config/ghostty/config.ghostty" && echo installed ;;
+    browsers) have elinks && have w3m && echo installed ;;
+    apps)     linked_here "$HOME/.local/bin/m365" && echo installed ;;
+    web)      have php && { have mariadb || have mysql; } && echo installed ;;
+    rust)     { have rustup || [ -x "$HOME/.cargo/bin/rustup" ]; } && echo installed ;;
+    desktop)  [ -e "$HOME/.config/hypr/.rhmatzeka-dotfiles" ] && have qs && echo installed ;;
+  esac
+  return 0
+}
+menu_note() {
+  case "$1" in
+    nvim)    echo "about 500 MB (Node.js, parsers and LSP servers), 5-15 minutes" ;;
+    apps)    echo "about 600 MB (Chromium if you have no Chrome/Brave/Edge, VLC, GIMP)" ;;
+    web)     echo "about 300 MB; services stay off unless you say yes" ;;
+    rust)    echo "about 1 GB (toolchain in ~/.rustup)" ;;
+    desktop) echo "1-2 hours: builds Qt 6.11 from source, about 5 GB of disk while building" ;;
+  esac
+  return 0
 }
 
 # ------------------------------------------------------------ arguments ----
@@ -60,7 +93,7 @@ while [ $# -gt 0 ]; do
     --all)        ALL=1 ;;
     --only)       shift; ONLY="${1:-}" ;;
     --only=*)     ONLY="${1#--only=}" ;;
-    --list)       list_components; exit 0 ;;
+    --list)       menu_list; exit 0 ;;
     -h|--help)    usage; exit 0 ;;
     *) die "unknown option: $1 (try --help)" ;;
   esac
@@ -77,35 +110,10 @@ preflight() {
 }
 
 select_components() {
-  local c ans n
+  # shellcheck disable=SC2034  # read by run_selected (lib/menu.sh)
   if [ "$ALL" = 1 ]; then SELECTED=("${COMPONENTS[@]}"); return; fi
-  if [ -n "$ONLY" ]; then
-    IFS=',' read -ra SELECTED <<<"$ONLY"
-    for c in "${SELECTED[@]}"; do
-      if [ "$c" = desktop ] && [ "$PKG_FAMILY" != debian ]; then
-        die "the desktop component (Hyprland + Caelestia) is only implemented for Debian 13 so far; on Arch/Fedora/openSUSE install Hyprland from your repositories and follow https://github.com/caelestia-dots/caelestia"
-      fi
-      [[ " ${COMPONENTS[*]} " == *" $c "* ]] || die "unknown component: $c (see --list)"
-    done
-    return
-  fi
-  if [ "$ASSUME_YES" = 1 ] || ! interactive; then SELECTED=("${DEFAULTS[@]}"); return; fi
-  printf '\n  Components:\n\n'
-  n=1; for c in "${COMPONENTS[@]}"; do
-    local mark=" "; for d in "${DEFAULTS[@]}"; do [ "$c" = "$d" ] && mark="*"; done
-    printf '   %d. [%s] %-9s %s\n' "$n" "$mark" "$c" "${DESC[$c]}"; n=$((n+1))
-  done
-  printf '\n  Pick numbers (e.g. "1 2 4"), "a" for all, Enter for the defaults (*), "q" to quit: ' >&2
-  read -r ans </dev/tty || ans=""
-  case "$ans" in
-    "") SELECTED=("${DEFAULTS[@]}") ;;
-    a|A) SELECTED=("${COMPONENTS[@]}") ;;
-    q|Q) info "Nothing installed."; exit 0 ;;
-    *) for n in ${ans//,/ }; do
-         [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 1 ] && [ "$n" -le "${#COMPONENTS[@]}" ] || die "not a valid choice: $n"
-         SELECTED+=("${COMPONENTS[$((n-1))]}")
-       done ;;
-  esac
+  if [ -n "$ONLY" ]; then menu_from_list "$ONLY"; return; fi
+  menu_choose
 }
 
 # ------------------------------------------------------------ helpers ----
@@ -206,11 +214,7 @@ comp_shell() {
     if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would run the starship installer"
     else mkdir -p "$HOME/.local/bin" && curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin" >/dev/null || return 1; fi
   fi
-  git_clone https://github.com/ohmyzsh/ohmyzsh "$HOME/.oh-my-zsh"
-  git_clone https://github.com/zsh-users/zsh-autosuggestions "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
-  git_clone https://github.com/zsh-users/zsh-syntax-highlighting "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
-  backup_and_link "$C/zsh/zshrc" "$HOME/.zshrc"
-  backup_and_link "$C/starship/starship.toml" "$HOME/.config/starship.toml"
+  shell_configs
   if [ "$(basename "${SHELL:-}")" != zsh ] && confirm "Make zsh your default login shell?" n; then
     have chsh || pkg_optional chsh
     run chsh -s "$(command -v zsh)" "$USER"
@@ -251,31 +255,7 @@ comp_nvim() {
     fi
   else ok "Neovim $v"; fi
 
-  # the NvChad starter, unless the user already has an nvim config of their own
-  local cfg="$HOME/.config/nvim" marker="$HOME/.config/nvim/.rhmatzeka-dotfiles"
-  if [ -e "$cfg" ] && [ ! -e "$marker" ]; then
-    warn "an nvim config already exists at ~/.config/nvim: leaving it untouched."
-    warn "Add $C/nvim/dotfiles.lua to its lua/plugins/ if you want the extra parsers/LSP."
-    return 0
-  fi
-  if [ ! -e "$cfg" ]; then
-    info "cloning the NvChad starter"
-    if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would clone NvChad/starter"
-    else git clone -q --depth 1 https://github.com/NvChad/starter "$cfg" && rm -rf "$cfg/.git" && : >"$marker"; fi
-  fi
-  [ "$DRY_RUN" = 1 ] || mkdir -p "$cfg/lua/plugins"
-  backup_and_link "$C/nvim/dotfiles.lua" "$cfg/lua/plugins/dotfiles.lua"
-
-  [ "$DRY_RUN" = 1 ] && { info "[dry-run] would sync plugins, build tree-sitter parsers and install LSP servers"; return 0; }
-  info "syncing plugins (first run, a minute or two)"
-  timeout 600 nvim --headless "+Lazy! sync" +qa >/dev/null 2>&1 || warn "plugin sync reported a problem; it will retry when you open nvim"
-  info "building tree-sitter parsers"
-  timeout 600 nvim --headless "+Lazy load nvim-treesitter" "+lua local ok,e=pcall(function() require('nvim-treesitter').install(dofile(vim.fn.stdpath('config')..'/lua/plugins/dotfiles.lua')[1].opts.ensure_installed):wait(540000) end) if not ok then print(e) end" +qa >/dev/null 2>&1 \
-    || warn "parser build reported a problem; check :checkhealth nvim-treesitter"
-  info "installing LSP servers and formatters (Mason)"
-  timeout 900 nvim --headless "+Lazy load mason.nvim" "+MasonInstall $(paste -sd' ' "$C/nvim/mason-packages")" "+qall" >/dev/null 2>&1 \
-    || warn "Mason reported a problem; run :Mason inside nvim to see which package failed"
-  ok "Neovim is ready"
+  nvchad_setup
 }
 
 comp_terminal() {
@@ -292,13 +272,7 @@ comp_terminal() {
 comp_browsers() {
   step "Terminal browsers"
   pkg_need elinks w3m
-  # elinks saves into the current directory by default; point it at the Downloads folder (absolute path, this file is per machine)
-  if [ "$DRY_RUN" = 1 ]; then info "[dry-run] would write ~/.config/elinks/local.conf (download folder)"
-  else
-    mkdir -p "$HOME/.config/elinks" "$(downloads_dir)"
-    printf '## written by rhmatzeka/dotfile: where elinks saves downloads\nset document.download.directory = "%s/"\n' "$(downloads_dir)" >"$HOME/.config/elinks/local.conf"
-  fi
-  backup_and_link "$C/elinks/elinks.conf" "$HOME/.config/elinks/elinks.conf"
+  elinks_configs "$(downloads_dir)"
   pkg_optional firefox
   if ! pkg_have firefox; then warn "Firefox is unavailable here, so Browsh is skipped (elinks and w3m still work)."; return 0; fi
   local t; t="$(arch_tag amd64 arm64)" || { fail "unsupported CPU: $ARCH"; return 1; }
@@ -368,20 +342,7 @@ comp_web() {
 comp_rust() {
   step "Rust (rustup)"
   pkg_need curl ca-certificates buildtools
-  if have rustup || [ -x "$HOME/.cargo/bin/rustup" ]; then
-    ok "rustup already installed"
-  elif [ "$DRY_RUN" = 1 ]; then info "[dry-run] would run the official rustup installer (rustup.rs)"
-  else
-    info "running the official rustup installer (stable toolchain, no changes to your shell files)"
-    curl -fsSL --proto '=https' --tlsv1.2 https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile default \
-      || { fail "rustup installer failed"; return 1; }
-  fi
-  if [ "$DRY_RUN" != 1 ]; then
-    export PATH="$HOME/.cargo/bin:$PATH"
-    rustup component add rust-analyzer clippy rustfmt >/dev/null 2>&1 || warn "could not add rust-analyzer/clippy/rustfmt"
-    ok "$(rustc --version 2>/dev/null)"
-  fi
-  info "\$HOME/.cargo/bin must be on your PATH (the zsh config from this repo does that)."
+  rustup_setup
 }
 
 comp_desktop() {
@@ -392,24 +353,9 @@ comp_desktop() {
 # ----------------------------------------------------------------- main ----
 preflight
 select_components
-[ "${#SELECTED[@]}" -gt 0 ] || { info "Nothing selected."; exit 0; }
-printf '\n  Installing: %s\n' "${SELECTED[*]}"
-[ "$DRY_RUN" = 1 ] || confirm "Continue?" y || { info "Cancelled."; exit 0; }
+menu_confirm || { info "Cancelled."; exit 0; }
 
-# keep components in canonical order, run each in its own subshell so one failure does not stop the rest
-OK=(); FAILED=()
-for c in "${COMPONENTS[@]}"; do
-  [[ " ${SELECTED[*]} " == *" $c "* ]] || continue
-  # NOT inside `if (...)`: bash ignores `set -e` in a condition context, which would let a failed apt run
-  # carry on and be reported as success. A plain subshell followed by $? keeps errexit active inside it.
-  ( set -e; "comp_$c" )
-  rc=$?
-  if [ "$rc" -eq 0 ]; then OK+=("$c"); else FAILED+=("$c"); fail "component failed (exit $rc): $c"; fi
-done
-
-printf '\n'
-[ ${#OK[@]} -gt 0 ]     && ok "Done: ${OK[*]}"
-[ ${#FAILED[@]} -gt 0 ] && fail "Failed: ${FAILED[*]} (run again with --only ${FAILED[*]// /,} after fixing the cause)"
+run_selected
 if [ "$DRY_RUN" != 1 ] && [ ${#OK[@]} -gt 0 ]; then
   [[ " ${OK[*]} " == *" shell "* ]] && info "Open a new terminal, or run: exec zsh"
   [[ " ${OK[*]} " == *" desktop "* ]] && info "Log out and choose the Hyprland session."
