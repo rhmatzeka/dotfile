@@ -44,7 +44,7 @@ menu_desc() {
     tmux)     echo "tmux with a cyan/Dracula theme" ;;
     nvim)     echo "Neovim (NvChad) with tree-sitter parsers and LSP servers" ;;
     terminal) echo "Ghostty + its config (Vim-style keys, dark theme)" ;;
-    browsers) echo "Terminal browsers: elinks, w3m" ;;
+    browsers) echo "Terminal browser: w3m (elinks and Browsh are Linux only: Homebrew has no elinks)" ;;
     web)      echo "Web development: PHP, Composer, MariaDB, phpMyAdmin (services stay off unless you say yes)" ;;
     rust)     echo "Rust toolchain via rustup (rustc, cargo, clippy, rustfmt, rust-analyzer)" ;;
   esac
@@ -57,7 +57,7 @@ menu_status() {
     tmux)     linked_here "$HOME/.config/tmux/tmux.conf" && have tmux && echo installed ;;
     nvim)     linked_here "$HOME/.config/nvim/lua/plugins/dotfiles.lua" && have nvim && echo installed ;;
     terminal) linked_here "$HOME/.config/ghostty/config.ghostty" && ghostty_app >/dev/null && echo installed ;;
-    browsers) have elinks && have w3m && echo installed ;;
+    browsers) have w3m && echo installed ;;
     web)      have php && { have mariadb || have mysql; } && echo installed ;;
     rust)     { have rustup || [ -x "$HOME/.cargo/bin/rustup" ]; } && echo installed ;;
   esac
@@ -217,11 +217,10 @@ comp_terminal() {
 }
 
 comp_browsers() {
-  step "Terminal browsers"
+  step "Terminal browser: w3m"
   brew_need w3m
-  brew_optional elinks
-  elinks_configs "$HOME/Downloads"
-  info "Browsh (Firefox inside the terminal) is set up on Linux only."
+  info "elinks and Browsh are set up on Linux only (Homebrew has no elinks package)."
+  info "use it with:  w3m https://example.com   (q quits)"
 }
 
 comp_web() {

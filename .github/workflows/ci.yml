@@ -52,7 +52,7 @@ jobs:
           /bin/bash "$GITHUB_WORKSPACE/install.sh" --yes --only shell,tmux,browsers,rust
           test -L "$HOME/.zshrc" && test -L "$HOME/.config/tmux/tmux.conf" && test -d "$HOME/.oh-my-zsh"
           command -v starship tmux w3m
-          "$HOME/.cargo/bin/cargo" --version
+          { command -v cargo || ls "$HOME/.cargo/bin/cargo"; } && cargo --version   # the runner may already have rustup
           zsh -ic 'echo zsh loads the config: $STARSHIP_CONFIG'
           /bin/bash "$GITHUB_WORKSPACE/uninstall.sh" --yes
           test ! -e "$HOME/.zshrc"

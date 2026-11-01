@@ -88,7 +88,7 @@ accident. Before anything is installed you get a summary with the big downloads 
     3. [x] tmux      tmux with a cyan/Dracula theme
     4. [x] nvim      Neovim (NvChad) with tree-sitter parsers and LSP servers
     5. [x] terminal  Ghostty + its config (Vim-style keys, dark theme)
-    6. [ ] browsers  Terminal browsers: elinks, w3m
+    6. [ ] browsers  Terminal browser: w3m (elinks and Browsh are Linux only: Homebrew has no elinks)
     7. [ ] web       Web development: PHP, Composer, MariaDB, phpMyAdmin (services stay off unless you say yes)
     8. [ ] rust      Rust toolchain via rustup (rustc, cargo, clippy, rustfmt, rust-analyzer)
 
@@ -126,7 +126,7 @@ shows up on the other machine after the next install (or `git pull` in `~/.local
 | Part | Linux | macOS |
 |---|---|---|
 | `base`, `shell`, `tmux`, `nvim`, `terminal`, `rust` | yes | yes (Homebrew; Ghostty itself is installed too) |
-| `browsers` | Browsh, elinks, w3m | elinks, w3m (no Browsh) |
+| `browsers` | Browsh, elinks, w3m | w3m only (Homebrew has no elinks; no Browsh) |
 | `web` | PHP, Composer, MariaDB, Apache, phpMyAdmin | PHP, Composer, MariaDB, phpMyAdmin (served with `php -S`, no Apache) |
 | `apps` (Microsoft 365 web-app launchers) | yes | no (install Office for Mac instead) |
 | `desktop` (Hyprland + Caelestia) | Debian 13 | no |
