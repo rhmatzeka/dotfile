@@ -136,7 +136,10 @@ jobs:
             if (-not (Get-ChildItem "$data\site\parser" -Filter "$p.*" -ErrorAction SilentlyContinue)) { throw "parser missing: $p" }
           }
           Get-ChildItem "$data\mason\packages" | Select-Object -ExpandProperty Name
-          foreach ($m in 'lua-language-server', 'typescript-language-server') {
-            if (-not (Test-Path "$data\mason\packages\$m")) { throw "Mason package missing: $m" }
+          foreach ($m in (Get-Content config\nvim\mason-packages | Where-Object { $_ })) {
+            if (-not (Test-Path "$data\mason\packages\$m")) {
+              Get-ChildItem $data -Filter 'mason*.log' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Get-Content $_.FullName -Tail 40 }
+              throw "Mason package missing: $m"
+            }
           }
           nvim --headless "+lua print(vim.treesitter.language.add('php') and 'php parser loads' or 'no php')" +qa

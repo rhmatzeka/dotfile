@@ -243,15 +243,25 @@ function Git-Clone([string]$url, [string]$dest) {
 }
 
 # Invoke-Timeout SECONDS EXE ARG... -> run EXE with a time limit, output hidden; $true when it exits 0 in time.
-# Arguments must not contain double quotes (they are joined into one command line).
+# On failure the last lines of its output are shown. Arguments must not contain double quotes (they are joined into one
+# command line).
 function Invoke-Timeout([int]$seconds, [string]$exe, [string[]]$arguments) {
   $ErrorActionPreference = 'Continue'
   $line = ($arguments | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
   $log = [IO.Path]::GetTempFileName()
   $p = Start-Process -FilePath $exe -ArgumentList $line -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err"
-  if (-not $p.WaitForExit($seconds * 1000)) { try { $p.Kill() } catch { }; Remove-Item $log, "$log.err" -ErrorAction SilentlyContinue; return $false }
-  Remove-Item $log, "$log.err" -ErrorAction SilentlyContinue
-  return ($p.ExitCode -eq 0)
+  $null = $p.Handle   # without touching Handle now, .NET reports no ExitCode once the process is gone
+  $done = $p.WaitForExit($seconds * 1000)
+  if (-not $done) { try { $p.Kill() } catch { } }
+  else { $p.WaitForExit() }
+  $okay = $done -and ($p.ExitCode -eq 0)
+  if (-not $okay) {
+    $why = 'timed out'; if ($done) { $why = "exit $($p.ExitCode)" }
+    Warn "$(Split-Path -Leaf $exe) $why; its last output:"
+    Get-Content -LiteralPath $log, "$log.err" -ErrorAction SilentlyContinue | Where-Object { $_.Trim() } | Select-Object -Last 15 | ForEach-Object { Write-Host "      $_" -ForegroundColor DarkGray }
+  }
+  Remove-Item -LiteralPath $log, "$log.err" -ErrorAction SilentlyContinue
+  return $okay
 }
 
 # ------------------------------------------------------------------ menu ----
