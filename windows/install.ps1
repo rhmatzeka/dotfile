@@ -122,7 +122,7 @@ function Fix-ExecutionPolicy {
   if ($pol['CurrentUser'] -and $pol['CurrentUser'] -ne 'Undefined') { $eff = $pol['CurrentUser'] }
   elseif ($pol['LocalMachine'] -and $pol['LocalMachine'] -ne 'Undefined') { $eff = $pol['LocalMachine'] }
   if (@('RemoteSigned', 'Unrestricted', 'Bypass') -contains $eff) { Ok "PowerShell may run local scripts ($eff)"; return }
-  Info "Windows PowerShell's script policy is $eff: it would refuse to load the profile."
+  Info "Windows PowerShell's script policy is ${eff}: it would refuse to load the profile."
   if ($script:DryRun) { Info '[dry-run] would offer: Set-ExecutionPolicy RemoteSigned -Scope CurrentUser'; return }
   if (Confirm 'Allow local scripts for your user (Set-ExecutionPolicy RemoteSigned -Scope CurrentUser)?' 'y') {
     & $ps51 -NoProfile -NonInteractive -Command 'Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force' | Out-Host

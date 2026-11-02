@@ -2,6 +2,9 @@
 # fed scripted answers (DOTFILES_ANSWERS), all in a throw-away home. Run with Windows PowerShell 5.1 and PowerShell 7:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tests\windows.ps1
 $ErrorActionPreference = 'Stop'
+# the installers are separate processes; under Stop, Windows PowerShell 5.1 would turn anything they write to stderr
+# into an exception here, so native calls below run with Continue and are judged by their exit code and output
+function Native([scriptblock]$b) { $ErrorActionPreference = 'Continue'; & $b }
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $failures = 0
 function Check([string]$name, [bool]$ok) {
@@ -32,7 +35,7 @@ function Run-Menu([string[]]$answers, [string[]]$extra) {
   $file = Join-Path $tmp 'answers.txt'
   Set-Content -LiteralPath $file -Value $answers -Encoding Ascii
   $env:DOTFILES_ANSWERS = $file
-  $out = & $exe -NoProfile -ExecutionPolicy Bypass -File $installer @extra 2>&1 | Out-String
+  $out = Native { & $exe -NoProfile -ExecutionPolicy Bypass -File $installer @extra 2>&1 | Out-String }
   $script:rc = $LASTEXITCODE
   Remove-Item Env:DOTFILES_ANSWERS
   return $out
@@ -58,11 +61,11 @@ $out = Run-Menu @('', 'n') @()
 Check 'menu: "n" at Continue? cancels' ($out -match 'Cancelled' -and $rc -eq 0)
 
 # -Only refuses Linux-only and unknown parts
-$null = & $exe -NoProfile -ExecutionPolicy Bypass -File $installer -DryRun -Yes -Only desktop 2>&1
+$null = Native { & $exe -NoProfile -ExecutionPolicy Bypass -File $installer -DryRun -Yes -Only desktop 2>&1 }
 Check '-Only desktop is refused' ($LASTEXITCODE -ne 0)
-$null = & $exe -NoProfile -ExecutionPolicy Bypass -File $installer -DryRun -Yes -Only nonsense 2>&1
+$null = Native { & $exe -NoProfile -ExecutionPolicy Bypass -File $installer -DryRun -Yes -Only nonsense 2>&1 }
 Check '-Only nonsense is refused' ($LASTEXITCODE -ne 0)
-$out = & $exe -NoProfile -ExecutionPolicy Bypass -File $installer -List 2>&1 | Out-String
+$out = Native { & $exe -NoProfile -ExecutionPolicy Bypass -File $installer -List 2>&1 | Out-String }
 Check '-List names every component' ($out -match 'base' -and $out -match 'rust' -and $out -match 'Not available on Windows')
 
 # nothing was written into the throw-away home by any of the above
