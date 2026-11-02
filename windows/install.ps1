@@ -340,7 +340,7 @@ function Comp-web {
       } catch { Warn 'not changed (permission refused); turn it off in services.msc if you want' }
     }
   }
-  Info 'Log in with: mariadb -u root   (add -p if you gave root a password during setup)'
+  Info 'Log in with: mariadb -u root   (root has no password and is only reachable from this PC; no password was set anywhere)'
 
   # phpMyAdmin: the official zip, served with PHP's own web server when you want it
   $pma = Join-Path $ToolsDir 'phpmyadmin'
