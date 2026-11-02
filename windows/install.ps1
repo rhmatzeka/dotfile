@@ -29,7 +29,7 @@ $script:DryRun = [bool]$DryRun
 $script:AssumeYes = [bool]$Yes
 . (Join-Path $script:DotfilesDir 'windows\lib.ps1')
 
-$C = Join-Path $script:DotfilesDir 'config'
+$script:ConfigDir = Join-Path $script:DotfilesDir 'config'
 $Arch = $env:PROCESSOR_ARCHITECTURE   # AMD64 or ARM64 (x86 for a 32-bit shell on a 64-bit system)
 if ($env:PROCESSOR_ARCHITEW6432) { $Arch = $env:PROCESSOR_ARCHITEW6432 }
 
@@ -194,8 +194,8 @@ function Comp-shell {
   Step 'Shell: PowerShell profile + starship'
   Need-Packages @('Starship.Starship')
   Fix-ExecutionPolicy
-  foreach ($t in $ProfileTargets) { Backup-And-Link (Join-Path $C 'powershell\profile.ps1') $t }
-  Backup-And-Link (Join-Path $C 'starship\starship.toml') (Join-Path $script:UserHome '.config\starship.toml')
+  foreach ($t in $ProfileTargets) { Backup-And-Link (Join-Path $script:ConfigDir 'powershell\profile.ps1') $t }
+  Backup-And-Link (Join-Path $script:ConfigDir 'starship\starship.toml') (Join-Path $script:UserHome '.config\starship.toml')
   Info 'zsh and Oh My Zsh are not native on Windows; for the full Linux shell, install WSL and run the Linux installer inside it.'
 }
 
@@ -214,7 +214,7 @@ function Comp-nvim {
   $marker = Join-Path $NvimDir '.rhmatzeka-dotfiles'
   if ((Test-Path -LiteralPath $NvimDir) -and -not (Test-Path -LiteralPath $marker)) {
     Warn "an nvim config already exists at $(Short $NvimDir): leaving it untouched."
-    Warn "Add $C\nvim\dotfiles.lua to its lua\plugins\ if you want the extra parsers/LSP."
+    Warn "Add $script:ConfigDir\nvim\dotfiles.lua to its lua\plugins\ if you want the extra parsers/LSP."
     return
   }
   if (-not (Test-Path -LiteralPath $NvimDir)) {
@@ -226,7 +226,7 @@ function Comp-nvim {
       New-Item -ItemType File -Path $marker | Out-Null
     }
   }
-  Backup-And-Link (Join-Path $C 'nvim\dotfiles.lua') (Join-Path $NvimDir 'lua\plugins\dotfiles.lua')
+  Backup-And-Link (Join-Path $script:ConfigDir 'nvim\dotfiles.lua') (Join-Path $NvimDir 'lua\plugins\dotfiles.lua')
 
   if ($script:DryRun) { Info '[dry-run] would sync plugins, build tree-sitter parsers and install LSP servers'; return }
   $nvim = (Get-Command nvim).Source
@@ -236,7 +236,7 @@ function Comp-nvim {
   $lua = "+lua local ok,e=pcall(function() require('nvim-treesitter').install(dofile(vim.fn.stdpath('config')..'/lua/plugins/dotfiles.lua')[1].opts.ensure_installed):wait(540000) end) if not ok then print(e) end"
   if (-not (Invoke-Timeout 600 $nvim @('--headless', '+Lazy load nvim-treesitter', $lua, '+qa'))) { Warn 'parser build reported a problem; check :checkhealth nvim-treesitter' }
   Info 'installing LSP servers and formatters (Mason)'
-  $mason = (Get-Content -LiteralPath (Join-Path $C 'nvim\mason-packages') | Where-Object { $_ }) -join ' '
+  $mason = (Get-Content -LiteralPath (Join-Path $script:ConfigDir 'nvim\mason-packages') | Where-Object { $_ }) -join ' '
   if (-not (Invoke-Timeout 900 $nvim @('--headless', '+Lazy load mason.nvim', "+MasonInstall $mason", '+qall'))) { Warn 'Mason reported a problem; run :Mason inside nvim to see which package failed' }
   Ok 'Neovim is ready (config in %LOCALAPPDATA%\nvim)'
 }
@@ -248,7 +248,7 @@ function Comp-terminal {
   if (Has-WindowsTerminal) { Ok 'Windows Terminal already installed' }
   elseif (-not (Winget-Install 'Microsoft.WindowsTerminal')) { throw 'could not install Windows Terminal' }
   if (-not (Font-Present)) { Warn 'the JetBrainsMono Nerd Font is missing (the base component installs it); icons show as boxes until then.' }
-  Backup-And-Link (Join-Path $C 'windows-terminal\dotfiles.json') $FragmentDst
+  Backup-And-Link (Join-Path $script:ConfigDir 'windows-terminal\dotfiles.json') $FragmentDst
   $settings = @(Find-WtSettings)
   if ($settings.Count -eq 0) {
     Info "Windows Terminal has no settings yet: open it once, then choose 'dotfiles (PowerShell)' in Settings > Startup > Default profile (or run this again)."
