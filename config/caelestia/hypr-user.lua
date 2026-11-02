@@ -35,6 +35,14 @@ end
 -- workspace and stops workspace swiping). Bring it back: Super+0, then Super+Alt+1..9 to move it to a workspace.
 hl.bind("SUPER + A", hl.dsp.window.move({ workspace = "10", follow = false }))
 
+-- Hotspot login pages (campus/cafe WiFi): ~/.local/bin/wifi-login --watch opens the login page by itself when a WiFi
+-- wants one, but stays quiet while the internet already works through USB tethering, LAN or another WiFi.
+-- Super+Shift+W checks again and opens the login page anyway.
+hl.on("hyprland.start", function()
+    hl.exec_cmd(os.getenv("HOME") .. "/.local/bin/wifi-login --watch")
+end)
+hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/wifi-login"))
+
 -- Transparent Caelestia panels: a softer, slightly darker blur keeps their text readable over bright or busy
 -- wallpapers (Hyprland default: size 8, passes 2, brightness 1.0, contrast 0.89). Applies to every blurred surface.
 hl.config({
