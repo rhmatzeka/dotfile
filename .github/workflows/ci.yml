@@ -92,6 +92,10 @@ jobs:
         run: |
           $t = Join-Path $env:RUNNER_TEMP 'home'
           $env:DOTFILES_HOME = $t; $env:DOTFILES_DOCUMENTS = "$t\Documents"; $env:DOTFILES_LOCALAPPDATA = "$t\AppData\Local"
+          # a Windows Terminal settings.json with comments, as Terminal writes it: only defaultProfile may change
+          $wt = "$t\AppData\Local\Microsoft\Windows Terminal"; New-Item -ItemType Directory -Force $wt | Out-Null
+          $orig = "{`n    // keep me`n    `"defaultProfile`": `"{61c54bbd-c2c6-5271-96e7-009a87ff44bf}`",`n    `"profiles`": { `"list`": [] }`n}`n"
+          [IO.File]::WriteAllText("$wt\settings.json", $orig)
           powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Yes -Only shell,terminal
           if ($LASTEXITCODE -ne 0) { throw "install failed: $LASTEXITCODE" }
           $p7 = "$t\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"; $p5 = "$t\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
@@ -104,8 +108,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "pwsh profile failed: $LASTEXITCODE" }
           powershell -NoProfile -ExecutionPolicy Bypass -Command ". '$p5'; prompt | Out-Null; 'powershell 5.1 profile ok'"
           if ($LASTEXITCODE -ne 0) { throw "5.1 profile failed: $LASTEXITCODE" }
+          $now = [IO.File]::ReadAllText("$wt\settings.json")
+          if ($now -ne $orig.Replace('{61c54bbd-c2c6-5271-96e7-009a87ff44bf}', '{8af80b22-81dc-5325-91bc-4b9b947457a5}')) { throw "settings.json changed more than defaultProfile:`n$now" }
+          'default profile set, comments kept'
           powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall.ps1 -Yes
           if (Test-Path $p7) { throw "uninstall left $p7" }
+          if ([IO.File]::ReadAllText("$wt\settings.json") -ne $orig) { throw 'uninstall did not put defaultProfile back' }
           'uninstall ok'
 
   # Windows, the heavy part: Neovim with NvChad, a C compiler, tree-sitter parsers and Mason, for real (10-20 minutes).
@@ -143,3 +151,30 @@ jobs:
             }
           }
           nvim --headless "+lua print(vim.treesitter.language.add('php') and 'php parser loads' or 'no php')" +qa
+
+  # Windows: the web tools for real (PHP + php.ini, Composer, MariaDB service, phpMyAdmin).
+  windows-web:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Real run of web
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Yes -Only web
+          if ($LASTEXITCODE -ne 0) { throw "install failed: $LASTEXITCODE" }
+      - name: PHP extensions, Composer, MariaDB
+        shell: pwsh
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          php -v
+          $mods = php -m
+          foreach ($e in 'curl', 'mbstring', 'mysqli', 'openssl', 'pdo_mysql', 'zip') { if ($mods -notcontains $e) { throw "php extension missing: $e" } }
+          composer --version
+          if ($LASTEXITCODE -ne 0) { throw 'composer does not run' }
+          $svc = Get-Service MariaDB
+          "MariaDB service: $($svc.Status), $($svc.StartType)"
+          if ($svc.StartType -ne 'Manual') { throw 'MariaDB should start by hand (the default answer is no)' }
+          Start-Service MariaDB
+          mariadb -u root -e "SELECT VERSION();"
+          if ($LASTEXITCODE -ne 0) { throw 'mariadb login failed' }
+          if (-not (Test-Path "$env:LOCALAPPDATA\rhmatzeka-dotfile-tools\phpmyadmin\index.php")) { throw 'phpMyAdmin missing' }
