@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+"""Find the captive portal (hotspot login page, MikroTik and the like) of the WiFi you joined and open it.
+
+  wifi-login           check now and open the login page if there is one (also bound to Super+Shift+W)
+  wifi-login --watch   keep running in the background (started from hypr-user.lua): every time WiFi connects or the
+                       network changes, check and open the login page by itself
+
+Each check is bound to the WiFi interface (DNS goes to the WiFi's own DHCP DNS server, HTTP through --interface), so it
+stays right when another connection (USB tethering, LAN) is the default route or Tailscale has taken over DNS.
+While the internet already works through another connection, the watcher leaves a WiFi that wants a login (or does
+not answer) alone, without opening pages or showing notifications; it opens the login page once that connection goes.
+"""
+import html
+import random
+import re
+import select
+import socket
+import struct
+import subprocess
+import sys
+import time
+from urllib.parse import urljoin, urlsplit, urlunsplit
+
+PROBES = [
+    ("http://nmcheck.gnome.org/check_network_status.txt", "NetworkManager is online"),
+    ("http://detectportal.firefox.com/success.txt", "success"),
+]
+WATCH_INTERVAL = 60   # seconds between checks in --watch once everything is settled
+SO_BINDTODEVICE = 25
+
+
+def run(*cmd):
+    return subprocess.run(cmd, capture_output=True, text=True).stdout
+
+
+def notify(title, body, icon="network-wireless", urgency="normal"):
+    subprocess.Popen(["notify-send", "-a", "WiFi", "-u", urgency, "-i", icon, title, body],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def wifi_devices():
+    """[(device, connection name, ip, dns server)] for every WiFi that is connected."""
+    out = []
+    for line in run("nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "dev").splitlines():
+        parts = re.split(r"(?<!\\):", line)
+        # "connecting (getting IP configuration)" counts too: joined the access point, but DHCP has not answered yet
+        if len(parts) < 4 or parts[1] != "wifi" or not (parts[2].startswith("connected") or "IP" in parts[2]):
+            continue
+        dev, conn = parts[0], parts[3].replace("\\:", ":")
+        out.append((dev, conn) + dev_addr(dev))
+    return out
+
+
+def dev_addr(dev):
+    """(ip, dns server) of one interface, from NetworkManager."""
+    info = run("nmcli", "-t", "-f", "IP4.ADDRESS,IP4.DNS", "dev", "show", dev)
+    ip = re.search(r"IP4\.ADDRESS\[1\]:([\d.]+)", info)
+    dns = re.search(r"IP4\.DNS\[1\]:([\d.]+)", info)
+    return ip and ip.group(1), dns and dns.group(1)
+
+
+def resolve_via(name, server, dev):
+    """A-record query sent straight to the WiFi's DNS server through the WiFi interface (not the system resolver)."""
+    if re.fullmatch(r"[\d.]+", name):
+        return name
+    tid = random.randint(0, 0xFFFF)
+    qname = b"".join(bytes([len(p)]) + p.encode() for p in name.rstrip(".").split(".")) + b"\0"
+    pkt = struct.pack(">HHHHHH", tid, 0x0100, 1, 0, 0, 0) + qname + struct.pack(">HH", 1, 1)
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.setsockopt(socket.SOL_SOCKET, SO_BINDTODEVICE, dev.encode())
+        s.settimeout(3)
+        for _ in range(2):
+            s.sendto(pkt, (server, 53))
+            try:
+                data, _ = s.recvfrom(4096)
+            except socket.timeout:
+                continue
+            if struct.unpack(">H", data[:2])[0] != tid:
+                continue
+            ancount = struct.unpack(">H", data[6:8])[0]
+            i = 12 + len(qname) + 4
+            for _ in range(ancount):
+                if data[i] & 0xC0 == 0xC0:
+                    i += 2
+                else:
+                    while data[i]:
+                        i += data[i] + 1
+                    i += 1
+                rtype, _, _, rdlen = struct.unpack(">HHIH", data[i:i + 10])
+                i += 10
+                if rtype == 1 and rdlen == 4:
+                    return socket.inet_ntoa(data[i:i + 4])
+                i += rdlen
+            return None
+    except OSError:
+        return None
+    finally:
+        s.close()
+    return None
+
+
+def system_resolve(name):
+    try:
+        return socket.gethostbyname(name)
+    except OSError:
+        return None
+
+
+def http_get(url, dev, ip):
+    """GET without following redirects, through one interface. (status, location, body) or None."""
+    host = urlsplit(url).hostname
+    port = urlsplit(url).port or 80
+    cmd = ["curl", "-s", "-m", "8", "--interface", dev, "-A", "Mozilla/5.0 (captive-portal-check)",
+           "-o", "-", "-w", "\n%{http_code} %{redirect_url}", url]
+    if ip:
+        cmd[1:1] = ["--resolve", f"{host}:{port}:{ip}"]
+    r = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
+    body, _, tail = r.stdout.rpartition("\n")
+    code, _, location = tail.partition(" ")
+    if r.returncode != 0 or code == "000":
+        return None
+    return int(code), location.strip(), body
+
+
+def login_url_from(probe_url, status, location, body):
+    if 300 <= status < 400 and location:
+        return urljoin(probe_url, location)
+    patterns = [
+        r'http-equiv=["\']?refresh["\']?[^>]*content=["\'][^"\']*url=([^"\'>]+)',
+        r'(?:window\.)?location(?:\.href)?\s*=\s*["\']([^"\']+)',
+        r'<form[^>]*action=["\']([^"\']+)',
+    ]
+    for pat in patterns:
+        m = re.search(pat, body, re.I)
+        if m:
+            return urljoin(probe_url, html.unescape(m.group(1).strip()))
+    return probe_url   # the portal page is served in place: open any URL and it redirects to the login
+
+
+def check(dev, ip, dns):
+    """('online'|'portal'|'dead', login_url)"""
+    if not ip:
+        return "dead", None
+    answered = False
+    for url, expect in PROBES:
+        host = urlsplit(url).hostname
+        addr = (dns and resolve_via(host, dns, dev)) or system_resolve(host)
+        res = http_get(url, dev, addr)
+        if res is None:
+            continue
+        answered = True
+        status, location, body = res
+        if status == 200 and expect in body:
+            return "online", None
+        return "portal", login_url_from(url, status, location, body)
+    return ("portal", PROBES[0][0]) if answered else ("dead", None)
+
+
+def default_route_devs():
+    """Interfaces that carry a default route, best first (Tailscale, Docker and bridges left out)."""
+    devs = []
+    for m in re.finditer(r"\bdev (\S+)", run("ip", "-4", "route", "show", "default")):
+        if m.group(1) not in devs and not m.group(1).startswith(("tailscale", "docker", "veth", "br-")):
+            devs.append(m.group(1))
+    return devs
+
+
+def other_uplink(dev):
+    """Another interface that is the default route (USB tethering, LAN), or None."""
+    devs = default_route_devs()
+    return devs[0] if devs and devs[0] != dev else None
+
+
+def internet_via():
+    """The interface (USB tethering, LAN, another WiFi) that already has working internet, or None.
+    Each default route is checked through its own interface, so a WiFi that still wants a login does not count."""
+    for d in default_route_devs():
+        ip, dns = dev_addr(d)
+        if check(d, ip, dns)[0] == "online":
+            return d
+    return None
+
+
+def browser_url(url, dev, dns):
+    """(url, problem). When the system resolver cannot find the portal's host name (DNS through Tailscale or
+    tethering), an http URL gets the address from the WiFi's DNS instead. An https URL cannot (its certificate is
+    for the host name), so that is reported as a problem."""
+    parts = urlsplit(url)
+    host = parts.hostname
+    if not host or re.fullmatch(r"[\d.]+", host) or not dns:
+        return url, None
+    wifi_ip = resolve_via(host, dns, dev)
+    if not wifi_ip or system_resolve(host) == wifi_ip:
+        return url, None
+    if parts.scheme == "http":
+        netloc = wifi_ip + (f":{parts.port}" if parts.port else "")
+        return urlunsplit(parts._replace(netloc=netloc)), None
+    return url, f"{host} is only known to this WiFi's DNS ({wifi_ip})"
+
+
+def open_login(conn, url, dev, dns, quiet=False):
+    """Open the login page. False when that cannot work yet (the internet goes through tethering or LAN)."""
+    url, problem = browser_url(url, dev, dns)
+    uplink = other_uplink(dev)
+    if problem and uplink:
+        if not quiet:
+            notify(f"WiFi login: {conn}",
+                   f"The login page cannot open while the internet goes through {uplink} (tethering/LAN).\n"
+                   f"Disconnect {uplink} and the login page opens by itself.",
+                   "network-wireless-acquiring", "critical")
+        return False
+    subprocess.Popen(["xdg-open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    notify(f"WiFi login: {conn}", f"Login page opened in the browser.\n{url}", "network-wireless-acquiring")
+    return True
+
+
+def dead_reason(ip):
+    if not ip:
+        return ("Joined the WiFi but got no IP address: the router does not answer DHCP, so no login page can show "
+                "up yet. Usually the access point is full or out of reach; try moving closer to another one.")
+    return "Joined and got an IP address, but the router does not answer (weak signal or a full access point)."
+
+
+def once():
+    devs = wifi_devices()
+    if not devs:
+        notify("WiFi not connected", "Connect to a WiFi network first.", "network-wireless-offline")
+        return 1
+    rc = 1
+    for dev, conn, ip, dns in devs:
+        state, url = check(dev, ip, dns)
+        if state == "online":
+            notify(f"{conn}: online", "Already logged in, nothing to do.", "network-wireless")
+            rc = 0
+        elif state == "portal":
+            open_login(conn, url, dev, dns)
+            rc = 0
+        else:
+            notify(f"{conn}: no answer", dead_reason(ip), "network-wireless-disconnected", "critical")
+    return rc
+
+
+def step(prev, state, uplink):
+    """Watcher decision for one WiFi: (new state, action). action is None, 'open', 'online' or 'dead'.
+    uplink: interface that already has working internet, or None."""
+    if state in ("portal", "dead") and uplink:
+        return "skip", None   # the internet works another way: no login page, no notifications
+    if state == "portal":
+        return "portal", (None if prev == "portal" else "open")
+    if state == "online":
+        return "online", ("online" if prev in ("portal", "blocked", "dead") else None)
+    if state == "dead":
+        if prev == "dead?":
+            return "dead", "dead"
+        return ("dead" if prev == "dead" else "dead?"), None   # failed once: wait for the next check before telling
+    return state, None
+
+
+def watch():
+    seen = {}   # (dev, conn, ip) -> last state
+    mon = subprocess.Popen(["nmcli", "monitor"], stdout=subprocess.PIPE, text=True, bufsize=1)
+    next_check = 0.0
+    while True:
+        timeout = max(0.0, next_check - time.monotonic())
+        ready, _, _ = select.select([mon.stdout], [], [], timeout)
+        if ready:
+            if not mon.stdout.readline():   # nmcli monitor died: start it again
+                time.sleep(5)
+                mon = subprocess.Popen(["nmcli", "monitor"], stdout=subprocess.PIPE, text=True, bufsize=1)
+            # give DHCP and DNS a moment, then check
+            next_check = min(next_check, time.monotonic() + 3)
+            continue
+        current = {}
+        results = [(dev, conn, ip, dns) + check(dev, ip, dns) for dev, conn, ip, dns in wifi_devices()]
+        # looked up once per round, and only when some WiFi is not online
+        uplink = internet_via() if any(r[4] != "online" for r in results) else None
+        for dev, conn, ip, dns, state, url in results:
+            key = (dev, conn, ip)
+            prev = seen.get(key)
+            state, action = step(prev, state, uplink)
+            if action == "open" and not open_login(conn, url, dev, dns, quiet=prev == "blocked"):
+                state = "blocked"   # try again on every check, without repeating the notification
+            elif state == "portal" and prev == "blocked" and not open_login(conn, url, dev, dns, quiet=True):
+                state = "blocked"
+            elif action == "online":
+                notify(f"{conn}: online", "Logged in, the internet works.")
+            elif action == "dead":
+                notify(f"{conn}: no answer", dead_reason(ip) + "\nSuper+Shift+W to check again.",
+                       "network-wireless-disconnected")
+            current[key] = state
+        seen = current
+        # until everything is online (or deliberately skipped), check more often to notice a finished login
+        fast = any(s not in ("online", "skip") for s in current.values())
+        next_check = time.monotonic() + (15 if fast else WATCH_INTERVAL)
+
+
+if __name__ == "__main__":
+    if "--watch" in sys.argv:
+        watch()
+    else:
+        sys.exit(once())

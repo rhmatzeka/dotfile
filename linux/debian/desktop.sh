@@ -255,6 +255,8 @@ install_dots() { # the upstream Hyprland config, cloned here (it is not redistri
     else mkdir -p "$HOME/.config" && cp -r "$up/$d" "$HOME/.config/$d" && ok "installed ~/.config/$d"; fi
   done
   for f in hypr-user.lua hypr-vars.lua shell.json; do backup_and_link "$C/caelestia/$f" "$HOME/.config/caelestia/$f"; done
+  # hotspot login pages: started by hypr-user.lua, Super+Shift+W checks again
+  backup_and_link "$DOTFILES_DIR/bin/wifi-login" "$HOME/.local/bin/wifi-login"
 }
 
 install_power() { # the shell hibernates at critical battery: give hibernation room, and power off if it still fails

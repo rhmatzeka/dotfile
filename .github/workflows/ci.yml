@@ -20,6 +20,8 @@ jobs:
           for f in config/nvim/dotfiles.lua config/caelestia/*.lua; do luac5.4 -p "$f" 2>&1 || lua5.4 -e "assert(loadfile('$f'))"; done
       - name: Menu (scripted answers)
         run: tests/menu.sh
+      - name: wifi-login (hotspot login watcher)
+        run: python3 tests/wifi-login.py
       - name: Dry run (everything except the desktop, which needs Debian 13)
         run: ./install.sh --dry-run --yes --only base,shell,tmux,nvim,terminal,browsers
       - name: Real run of the user-level parts in a throw-away HOME
