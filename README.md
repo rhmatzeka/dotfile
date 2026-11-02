@@ -1,4 +1,4 @@
-# Dotfiles for Linux (Debian, Ubuntu, Arch, Fedora, openSUSE) and macOS: zsh, tmux, Neovim, Ghostty and Hyprland in one command
+# Dotfiles for Linux (Debian, Ubuntu, Arch, Fedora, openSUSE), macOS and Windows: zsh, tmux, Neovim, Ghostty and Hyprland in one command
 
 [![ci](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml/badge.svg)](https://github.com/rhmatzeka/dotfile/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/rhmatzeka/dotfile)](LICENSE)
@@ -8,15 +8,22 @@
 ![Fedora 44](https://img.shields.io/badge/Fedora-44-51A2DA?logo=fedora&logoColor=white)
 ![openSUSE Tumbleweed](https://img.shields.io/badge/openSUSE-Tumbleweed-73BA25?logo=opensuse&logoColor=white)
 ![macOS beta](https://img.shields.io/badge/macOS-beta-000000?logo=apple&logoColor=white)
+![Windows beta](https://img.shields.io/badge/Windows-beta-0078D4?logo=windows&logoColor=white)
 
-A one-command **dotfiles installer** for Linux (Debian/Ubuntu, Arch, Fedora, openSUSE) and **macOS** (beta) for a fast
-terminal and, on Linux, an optional **Hyprland** desktop with the **Caelestia** shell. A checklist lets you pick only the
+A one-command **dotfiles installer** for Linux (Debian/Ubuntu, Arch, Fedora, openSUSE), **macOS** (beta) and
+**Windows** (beta, [PowerShell + Windows Terminal](#windows)) for a fast terminal and, on Linux, an optional **Hyprland** desktop with the **Caelestia** shell. A checklist lets you pick only the
 parts you want, for example just the terminal setup on a Mac. It sets up **zsh** (Oh My Zsh, starship), **tmux**, **Neovim** with **NvChad** (tree-sitter, LSP),
 **Ghostty**, terminal browsers (Browsh, elinks, w3m) and a Dracula + cyan theme. Nothing is overwritten without a
 backup, and everything can be undone.
 
 ```bash
 bash <(curl -fsSL https://dotfiles.rahmateka.my.id)
+```
+
+On Windows, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.ps1 | iex
 ```
 
 ## Preview
@@ -133,6 +140,50 @@ shows up on the other machine after the next install (or `git pull` in `~/.local
 
 Your SSH keys, `.env` files and app logins are not part of this repository; copy them over yourself.
 
+## Windows
+
+Windows has no zsh, tmux or Ghostty, so the Windows installer (beta) sets up the closest native equivalents with the
+same look: **PowerShell** gets the same starship prompt, aliases and fzf keys as the zshrc, and **Windows Terminal**
+gets the Ghostty colours, font, padding and cursor. Neovim, Rust and the web tools are the same as everywhere else.
+Packages come from **winget**, which Windows 10 (1809 or newer) and 11 already have. The desktop parts (Hyprland,
+Caelestia) and the Linux-only tools are listed but cannot be picked.
+
+Open **PowerShell** (a normal window, not as administrator) and run:
+
+```powershell
+irm https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.ps1 | iex
+```
+
+To pass options, wrap it in a script block:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.ps1))) -DryRun -All
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.ps1))) -Only shell,terminal
+```
+
+It installs git with winget if needed, fetches this repository to `%LOCALAPPDATA%\rhmatzeka-dotfile` and shows the same
+checklist as on Linux and macOS (`-All`, `-Only`, `-DryRun`, `-Yes`, `-List` work like their `--` versions).
+
+| Part | On Windows |
+|---|---|
+| `base` | winget: git, ripgrep, fzf, jq, PowerShell 7, the JetBrainsMono Nerd Font; eza, zoxide, fastfetch and btop4win when available |
+| `shell` | starship, and one PowerShell profile linked to both PowerShell 7 and Windows PowerShell 5.1: starship prompt, PSReadLine history suggestions and Dracula colours, fzf on **Ctrl+R** (history), **Ctrl+T** (files) and **Alt+C** (folders), zoxide (`z`), eza for `ls`/`ll`/`la`, `n` for nvim, and the git shortcuts `g ga gst gd gco gb glog`. If Windows PowerShell would refuse to run the profile (the default `Restricted` script policy), it offers `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`. Local tweaks go in `~\.config\powershell\local.ps1` |
+| `nvim` | Neovim, Node.js, the tree-sitter CLI and NvChad in `%LOCALAPPDATA%\nvim`, with the same parsers and Mason servers. The parsers need a C compiler: if there is no Visual Studio, GCC from WinLibs is installed (about 1 GB) |
+| `terminal` | Windows Terminal (when missing) and a **profile "dotfiles (PowerShell)"** with the colour scheme, added as a [JSON fragment](https://learn.microsoft.com/windows/terminal/json-fragment-extensions) so your `settings.json` is not rewritten. It offers to make it the default profile (one value in `settings.json` changes; `uninstall` puts it back) |
+| `web` | PHP 8.5 (with a `php.ini` that turns on openssl, curl, mbstring, mysqli, pdo_mysql, zip), Composer (checked against its SHA-256), MariaDB and phpMyAdmin. MariaDB is a Windows service: it asks whether it should start with Windows (default no) |
+| `rust` | The official `rustup-init.exe`. Without Visual Studio it uses the GNU toolchain, which needs nothing else; it offers the Visual Studio Build Tools (about 5 GB) for the MSVC toolchain instead |
+| `tmux`, `browsers`, `desktop`, `apps` | not on Windows (use Windows Terminal panes: Alt+Shift+D splits, Alt+arrows moves) |
+
+For the real zsh/tmux setup on Windows, install **WSL** (`wsl --install`), open Ubuntu and run the Linux command inside it.
+
+Files are linked to the repository when Windows allows symbolic links (**Developer Mode** on, or an administrator
+window); otherwise they are copied, and running the installer again after a `git pull` refreshes the copies. Undo
+everything with:
+
+```powershell
+irm https://raw.githubusercontent.com/rhmatzeka/dotfile/main/uninstall.ps1 | iex
+```
+
 ## What you get
 
 | Component | Contents |
@@ -191,6 +242,7 @@ If RAM is tight:
 | Fedora 44 (and RHEL-likes via `ID_LIKE`) | Installed and checked from scratch in the official Fedora container image. `starship` is not in the Fedora repositories: its official installer is used. Only Fedora itself was tested. `web` and `rust` also installed and checked from scratch |
 | openSUSE Tumbleweed | Installed and checked from scratch in the official Tumbleweed image. Leap and SLE were not tested. `web` and `rust` also installed and checked from scratch |
 | macOS 13 or newer (Apple Silicon and Intel) | **Beta.** Everything except `desktop` and `apps`, through Homebrew. Checked on every push by GitHub Actions on `macos-latest` with Apple's own `/bin/bash` 3.2: the menu, a dry run of every part, and a real install of `shell`, `tmux`, `browsers` and `rust` followed by `uninstall`. Not yet run by hand on a real Mac; `nvim`, `terminal` (Ghostty) and `web` were only dry-run |
+| Windows 10 (1809+) and 11 | **Beta.** `base`, `shell`, `nvim`, `terminal`, `web`, `rust` through winget and PowerShell (see [Windows](#windows)). Checked on every push by GitHub Actions on `windows-latest` under Windows PowerShell 5.1 and PowerShell 7: every script parses, PSScriptAnalyzer, the menu with scripted answers, a dry run of every part, a real install of `shell` and `terminal` (the profile loads in both PowerShells) followed by `uninstall`, and a real install of `nvim` (parsers built with GCC, Mason servers installed). Not yet run by hand on a desktop Windows; `web` and `rust` were only dry-run |
 | Alpine, NixOS, Void, Gentoo | **Not supported.** Contributions are welcome (see below) |
 
 `desktop` (Hyprland + Caelestia) is **Debian 13 only** because it depends on `trixie-backports` and on pinned build

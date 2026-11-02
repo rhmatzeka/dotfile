@@ -49,6 +49,10 @@ case "$(uname -s)" in
          say "Supported: macOS, and the Debian/Ubuntu, Arch, Fedora and openSUSE families."
          exit 1 ;;
     esac ;;
+  MINGW*|MSYS*|CYGWIN*)
+    bad "This is the Linux/macOS installer. On Windows, open PowerShell and run:"
+    say "irm https://raw.githubusercontent.com/rhmatzeka/dotfile/main/install.ps1 | iex"
+    exit 1 ;;
   *) bad "Unsupported OS: $(uname -s)"; exit 1 ;;
 esac
 if [ "$PLATFORM" = macos ]; then
