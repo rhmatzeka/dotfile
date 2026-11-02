@@ -1,0 +1,43 @@
+{
+  "profiles": [
+    {
+      "guid": "{8af80b22-81dc-5325-91bc-4b9b947457a5}",
+      "name": "dotfiles (PowerShell)",
+      "commandline": "pwsh.exe -NoLogo",
+      "icon": "ms-appx:///ProfileIcons/pwsh.png",
+      "startingDirectory": "%USERPROFILE%",
+      "colorScheme": "rhmatzeka Dracula Cyan",
+      "font": { "face": "JetBrainsMono Nerd Font", "size": 12 },
+      "opacity": 90,
+      "useAcrylic": false,
+      "padding": "10, 8",
+      "cursorShape": "bar",
+      "closeOnExit": "graceful"
+    }
+  ],
+  "schemes": [
+    {
+      "name": "rhmatzeka Dracula Cyan",
+      "background": "#0D1117",
+      "foreground": "#EFF1F4",
+      "cursorColor": "#00D9FF",
+      "selectionBackground": "#1F3A4D",
+      "black": "#1B1F27",
+      "red": "#FF5555",
+      "green": "#50FA7B",
+      "yellow": "#F1FA8C",
+      "blue": "#BD93F9",
+      "purple": "#FF79C6",
+      "cyan": "#00D9FF",
+      "white": "#EFF1F4",
+      "brightBlack": "#6C757D",
+      "brightRed": "#FF6E6E",
+      "brightGreen": "#69FF94",
+      "brightYellow": "#FFFFA5",
+      "brightBlue": "#D6ACFF",
+      "brightPurple": "#FF92DF",
+      "brightCyan": "#01CBC6",
+      "brightWhite": "#FFFFFF"
+    }
+  ]
+}

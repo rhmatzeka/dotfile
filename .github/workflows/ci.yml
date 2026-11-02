@@ -16,6 +16,7 @@ jobs:
         run: |
           for f in install.sh uninstall.sh lib/*.sh linux/*.sh linux/debian/*.sh macos/*.sh; do bash -n "$f"; done
           jq . config/caelestia/shell.json >/dev/null
+          jq . config/windows-terminal/dotfiles.json >/dev/null
           for f in config/nvim/dotfiles.lua config/caelestia/*.lua; do luac5.4 -p "$f" 2>&1 || lua5.4 -e "assert(loadfile('$f'))"; done
       - name: Menu (scripted answers)
         run: tests/menu.sh
@@ -56,3 +57,126 @@ jobs:
           zsh -ic 'echo zsh loads the config: $STARSHIP_CONFIG'
           /bin/bash "$GITHUB_WORKSPACE/uninstall.sh" --yes
           test ! -e "$HOME/.zshrc"
+
+  # Windows: the checks run under both Windows PowerShell 5.1 (what every Windows has) and PowerShell 7.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse, ASCII and menu checks (Windows PowerShell 5.1)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tests\windows.ps1
+      - name: Parse, ASCII and menu checks (PowerShell 7)
+        shell: pwsh
+        run: pwsh -NoProfile -File tests\windows.ps1
+      - name: PSScriptAnalyzer (errors)
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+          $r = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          $r | Format-Table -AutoSize
+          if ($r) { exit 1 }
+      - name: Dry run of every Windows component (through the entry script)
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -DryRun -Yes -All
+      - name: winget on the runner
+        shell: pwsh
+        run: |
+          if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+            Install-Module Microsoft.WinGet.Client -Force -Scope CurrentUser
+            Repair-WinGetPackageManager -AllUsers -Latest
+          }
+          winget --version
+      - name: Real run of shell and terminal in a throw-away home, then uninstall
+        shell: powershell
+        run: |
+          $t = Join-Path $env:RUNNER_TEMP 'home'
+          $env:DOTFILES_HOME = $t; $env:DOTFILES_DOCUMENTS = "$t\Documents"; $env:DOTFILES_LOCALAPPDATA = "$t\AppData\Local"
+          # a Windows Terminal settings.json with comments, as Terminal writes it: only defaultProfile may change
+          $wt = "$t\AppData\Local\Microsoft\Windows Terminal"; New-Item -ItemType Directory -Force $wt | Out-Null
+          $orig = "{`n    // keep me`n    `"defaultProfile`": `"{61c54bbd-c2c6-5271-96e7-009a87ff44bf}`",`n    `"profiles`": { `"list`": [] }`n}`n"
+          [IO.File]::WriteAllText("$wt\settings.json", $orig)
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Yes -Only shell,terminal
+          if ($LASTEXITCODE -ne 0) { throw "install failed: $LASTEXITCODE" }
+          $p7 = "$t\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"; $p5 = "$t\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
+          foreach ($f in $p7, $p5, "$t\.config\starship.toml", "$t\AppData\Local\Microsoft\Windows Terminal\Fragments\rhmatzeka-dotfile\dotfiles.json") {
+            if (-not (Test-Path $f)) { throw "missing: $f" }; Write-Host "present: $f"
+          }
+          # the profile loads in both PowerShells and gives the starship prompt
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          pwsh -NoProfile -Command ". '$p7'; if (-not (Get-Command starship -ErrorAction SilentlyContinue)) { exit 3 }; prompt | Out-Null; 'pwsh profile ok'"
+          if ($LASTEXITCODE -ne 0) { throw "pwsh profile failed: $LASTEXITCODE" }
+          powershell -NoProfile -ExecutionPolicy Bypass -Command ". '$p5'; prompt | Out-Null; 'powershell 5.1 profile ok'"
+          if ($LASTEXITCODE -ne 0) { throw "5.1 profile failed: $LASTEXITCODE" }
+          $now = [IO.File]::ReadAllText("$wt\settings.json")
+          if ($now -ne $orig.Replace('{61c54bbd-c2c6-5271-96e7-009a87ff44bf}', '{8af80b22-81dc-5325-91bc-4b9b947457a5}')) { throw "settings.json changed more than defaultProfile:`n$now" }
+          'default profile set, comments kept'
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\uninstall.ps1 -Yes
+          if (Test-Path $p7) { throw "uninstall left $p7" }
+          if ([IO.File]::ReadAllText("$wt\settings.json") -ne $orig) { throw 'uninstall did not put defaultProfile back' }
+          'uninstall ok'
+
+  # Windows, the heavy part: Neovim with NvChad, a C compiler, tree-sitter parsers and Mason, for real (10-20 minutes).
+  windows-nvim:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: winget on the runner
+        shell: pwsh
+        run: |
+          if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+            Install-Module Microsoft.WinGet.Client -Force -Scope CurrentUser
+            Repair-WinGetPackageManager -AllUsers -Latest
+          }
+          winget --version
+      - name: Real run of nvim
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Yes -Only nvim
+          if ($LASTEXITCODE -ne 0) { throw "install failed: $LASTEXITCODE" }
+      - name: Parsers and LSP servers are there
+        shell: pwsh
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          $data = "$env:LOCALAPPDATA\nvim-data"
+          Get-ChildItem "$data\site\parser" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+          foreach ($p in 'lua', 'php', 'html', 'javascript') {
+            if (-not (Get-ChildItem "$data\site\parser" -Filter "$p.*" -ErrorAction SilentlyContinue)) { throw "parser missing: $p" }
+          }
+          Get-ChildItem "$data\mason\packages" | Select-Object -ExpandProperty Name
+          foreach ($m in (Get-Content config\nvim\mason-packages | Where-Object { $_ })) {
+            if (-not (Test-Path "$data\mason\packages\$m")) {
+              Get-ChildItem $data -Filter 'mason*.log' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Get-Content $_.FullName -Tail 40 }
+              throw "Mason package missing: $m"
+            }
+          }
+          nvim --headless "+lua print(vim.treesitter.language.add('php') and 'php parser loads' or 'no php')" +qa
+
+  # Windows: the web tools for real (PHP + php.ini, Composer, MariaDB service, phpMyAdmin).
+  windows-web:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Real run of web
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Yes -Only web
+          if ($LASTEXITCODE -ne 0) { throw "install failed: $LASTEXITCODE" }
+      - name: PHP extensions, Composer, MariaDB
+        shell: pwsh
+        run: |
+          $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+          $php = (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Directory -Filter 'PHP.PHP.8.5_*' | Select-Object -First 1).FullName + '\php.exe'
+          & $php -v
+          $mods = & $php -m
+          foreach ($e in 'curl', 'mbstring', 'mysqli', 'openssl', 'pdo_mysql', 'zip') { if ($mods -notcontains $e) { throw "php extension missing: $e" } }
+          & $php "$env:USERPROFILE\.local\bin\composer.phar" --version
+          if ($LASTEXITCODE -ne 0) { throw 'composer does not run' }
+          Get-Service *maria*, *mysql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
+          $svc = Get-Service MariaDB
+          "MariaDB service: $($svc.Status), $($svc.StartType)"
+          if ($svc.StartType -ne 'Manual') { throw 'MariaDB should start by hand (the default answer is no)' }
+          Start-Service MariaDB
+          mariadb -u root -e "SELECT VERSION();"
+          if ($LASTEXITCODE -ne 0) { throw 'mariadb login failed' }
+          if (-not (Test-Path "$env:LOCALAPPDATA\rhmatzeka-dotfile-tools\phpmyadmin\index.php")) { throw 'phpMyAdmin missing' }
