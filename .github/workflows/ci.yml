@@ -166,11 +166,13 @@ jobs:
         shell: pwsh
         run: |
           $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
-          php -v
-          $mods = php -m
+          $php = (Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Directory -Filter 'PHP.PHP.8.5_*' | Select-Object -First 1).FullName + '\php.exe'
+          & $php -v
+          $mods = & $php -m
           foreach ($e in 'curl', 'mbstring', 'mysqli', 'openssl', 'pdo_mysql', 'zip') { if ($mods -notcontains $e) { throw "php extension missing: $e" } }
-          composer --version
+          & $php "$env:USERPROFILE\.local\bin\composer.phar" --version
           if ($LASTEXITCODE -ne 0) { throw 'composer does not run' }
+          Get-Service *maria*, *mysql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
           $svc = Get-Service MariaDB
           "MariaDB service: $($svc.Status), $($svc.StartType)"
           if ($svc.StartType -ne 'Manual') { throw 'MariaDB should start by hand (the default answer is no)' }

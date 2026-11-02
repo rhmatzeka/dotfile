@@ -237,7 +237,15 @@ function Comp-nvim {
   if (-not (Invoke-Timeout 600 $nvim @('--headless', '+Lazy load nvim-treesitter', $lua, '+qa'))) { Warn 'parser build reported a problem; check :checkhealth nvim-treesitter' }
   Info 'installing LSP servers and formatters (Mason)'
   $mason = (Get-Content -LiteralPath (Join-Path $script:ConfigDir 'nvim\mason-packages') | Where-Object { $_ }) -join ' '
-  if (-not (Invoke-Timeout 900 $nvim @('--headless', '+Lazy load mason.nvim', "+MasonInstall $mason", '+qall'))) { Warn 'Mason reported a problem; run :Mason inside nvim to see which package failed' }
+  if (-not (Invoke-Timeout 900 $nvim @('--headless', '+Lazy load mason.nvim', "+MasonInstall $mason", '+qall'))) {
+    # downloads time out now and then (seen in CI: schema downloads): try the missing packages once more
+    $pkgDir = Join-Path $env:LOCALAPPDATA 'nvim-data\mason\packages'
+    $missing = @($mason -split ' ' | Where-Object { -not (Test-Path -LiteralPath (Join-Path $pkgDir $_)) })
+    if ($missing.Count -gt 0) {
+      Info "trying again: $($missing -join ' ')"
+      if (-not (Invoke-Timeout 900 $nvim @('--headless', '+Lazy load mason.nvim', "+MasonInstall $($missing -join ' ')", '+qall'))) { Warn 'Mason reported a problem; run :Mason inside nvim to see which package failed' }
+    }
+  }
   Ok 'Neovim is ready (config in %LOCALAPPDATA%\nvim)'
 }
 
@@ -262,15 +270,27 @@ function Comp-terminal {
 
 function Comp-web {
   Step 'Web development: PHP, Composer, MariaDB, phpMyAdmin'
-  Need-Packages @('PHP.PHP.8.5', 'MariaDB.Server')
+  Need-Packages @('PHP.PHP.8.5')
+  # A silent MariaDB MSI creates no Windows service unless SERVICENAME is given (MariaDB's MSI documentation)
+  if (-not (Find-MariaDB) -and -not (Winget-Has 'MariaDB.Server')) {
+    if (-not (Winget-Install 'MariaDB.Server' @('--custom', 'SERVICENAME=MariaDB'))) { throw 'could not install MariaDB' }
+  } else { Ok 'already installed: MariaDB.Server' }
 
   # php.ini: the zip from php.net has none. Start from php.ini-development and turn on what Composer and MariaDB need.
   if ($script:DryRun) { Info '[dry-run] would write php.ini (openssl, curl, mbstring, mysqli, pdo_mysql, zip, fileinfo)' }
   else {
+    # winget's own PHP, not whatever php.exe comes first on PATH (XAMPP, Chocolatey...)
+    $phpDir = $null
+    $pkg = Get-ChildItem -Path (Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages') -Directory -Filter 'PHP.PHP.8.5_*' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($pkg -and (Test-Path (Join-Path $pkg.FullName 'php.exe'))) { $phpDir = $pkg.FullName }
     $php = Get-Command php -ErrorAction SilentlyContinue
-    if (-not $php) { throw 'php is not on PATH after installing it; open a new terminal and run this again' }
-    $phpDir = Split-Path -Parent $php.Source
-    $t = Get-LinkTarget $php.Source; if ($t) { $phpDir = Split-Path -Parent $t }
+    if (-not $phpDir) {
+      if (-not $php) { throw 'php is not on PATH after installing it; open a new terminal and run this again' }
+      $phpDir = Split-Path -Parent $php.Source
+      $t = Get-LinkTarget $php.Source; if ($t) { $phpDir = Split-Path -Parent $t }
+    } elseif ($php -and -not $php.Source.StartsWith($phpDir, [StringComparison]::OrdinalIgnoreCase)) {
+      Warn "another PHP comes first on your PATH: $($php.Source). The one set up here is $phpDir\php.exe"
+    }
     $ini = Join-Path $phpDir 'php.ini'
     if (Test-Path -LiteralPath $ini) { Ok "php.ini already exists: $ini (left as it is)" }
     elseif (Test-Path -LiteralPath (Join-Path $phpDir 'php.ini-development')) {
@@ -308,7 +328,9 @@ function Comp-web {
   $bin = Find-MariaDB
   if ($bin) { Add-UserPath $bin }
   if ($script:DryRun) { Info '[dry-run] would ask whether MariaDB should start with Windows' }
-  elseif (Get-Service -Name 'MariaDB' -ErrorAction SilentlyContinue) {
+  elseif (-not (Get-Service -Name 'MariaDB' -ErrorAction SilentlyContinue)) {
+    if ($bin) { Info "MariaDB has no Windows service here (installed earlier without one); start it by hand with: mariadbd --console" }
+  } else {
     if (Confirm 'Keep MariaDB starting with Windows?' 'n') { Ok 'MariaDB starts with Windows (service "MariaDB")' }
     else {
       Info 'setting the MariaDB service to start by hand (Windows asks for permission)'
